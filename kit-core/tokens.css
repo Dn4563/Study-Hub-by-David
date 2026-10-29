@@ -1,0 +1,27 @@
+/* Design tokens shared by the Study Hub and every kit. The course accent comes from course.json
+   (set at runtime as --accent-l / --accent-d). */
+:root {
+  --ground: #E9EBEE; --sheet: #FFFFFF; --sunk: #F3F4F6; --ink: #1A1D21; --ink-2: #555C65; --rule: #D6DAE0;
+  --ok: #23774A; --ok-wash: #E3F2E9; --bad: #B3261E; --bad-wash: #FBE9E7; --mid: #9A5B00; --mid-wash: #FCF0DC;
+  --t0: #3E6FB0; --t1: #B5552F; --t2: #3D8A5F; --t3: #7A5BB5; --t4: #A8862A; --t5: #3B8C99; --t6: #A54C79; --t7: #6B7280;
+  --accent: var(--accent-l, #2C5AA0); --on-accent: #FFFFFF;
+  --sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --r: 8px; --r-sm: 6px; --fast: 120ms; --mid-t: 180ms;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --ground: #15171A; --sheet: #202328; --sunk: #1A1C20; --ink: #ECEEF0; --ink-2: #A5ABB3; --rule: #363A40;
+  --ok: #6CC495; --ok-wash: #183527; --bad: #F08A80; --bad-wash: #3D1F1C; --mid: #E7B45F; --mid-wash: #3A2C14;
+  --t0: #86AEEF; --t1: #E8977A; --t2: #7BC79B; --t3: #B49BEA; --t4: #D9BC63; --t5: #79C3CE; --t6: #DB8DB5; --t7: #A5ABB3;
+  --accent: var(--accent-d, #86AEEF); --on-accent: #15171A; color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --ground: #15171A; --sheet: #202328; --sunk: #1A1C20; --ink: #ECEEF0; --ink-2: #A5ABB3; --rule: #363A40;
+    --ok: #6CC495; --ok-wash: #183527; --bad: #F08A80; --bad-wash: #3D1F1C; --mid: #E7B45F; --mid-wash: #3A2C14;
+    --t0: #86AEEF; --t1: #E8977A; --t2: #7BC79B; --t3: #B49BEA; --t4: #D9BC63; --t5: #79C3CE; --t6: #DB8DB5; --t7: #A5ABB3;
+    --accent: var(--accent-d, #86AEEF); --on-accent: #15171A; color-scheme: dark;
+  }
+}
+:root { --accent-wash: color-mix(in srgb, var(--accent) 10%, var(--sheet)); }
