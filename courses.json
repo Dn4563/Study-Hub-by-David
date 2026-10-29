@@ -1,0 +1,68 @@
+{
+  "title": "Study Hub",
+  "byline": "by David Noskow",
+  "courses": [
+    {
+      "id": "psych",
+      "name": "AP Psychology",
+      "description": "Phineas's study kit for the class, with units 0, 1 and 5 so far.",
+      "url": "https://brother12334.github.io/Psych-Unit-1/Psych%20Unit%201%20Study%20Kit.html",
+      "owner": "external",
+      "maker": "Phineas",
+      "accent": "#2F6B5E",
+      "accentDark": "#7FC2B1",
+      "status": "active",
+      "units": [
+        {
+          "label": "Unit 0",
+          "title": "Perspectives, research methods, statistics",
+          "status": "ready"
+        },
+        {
+          "label": "Unit 1",
+          "title": "Neurons, the brain, senses, sleep and drugs",
+          "status": "ready"
+        },
+        {
+          "label": "Unit 5",
+          "title": "Health psychology, disorders, treatment",
+          "status": "ready"
+        }
+      ]
+    },
+    {
+      "id": "apworld",
+      "name": "AP World History",
+      "description": "Flashcards, lessons, quizzes and a full practice test for each unit, built from AMSCO.",
+      "url": "https://dn4563.github.io/AP-World-History-Study-Kit/",
+      "owner": "self",
+      "accent": "#8E3B2F",
+      "accentDark": "#E08A7B",
+      "status": "active",
+      "units": [
+        {
+          "label": "Unit 2",
+          "title": "Networks of Exchange",
+          "status": "review"
+        }
+      ]
+    },
+    {
+      "id": "chem",
+      "name": "Pre-AP Chemistry",
+      "description": "One kit per chapter, with practice exams scored by day and partial credit on multi-part questions.",
+      "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/",
+      "owner": "self",
+      "accent": "#2C5AA0",
+      "accentDark": "#86AEEF",
+      "status": "active",
+      "units": [
+        {
+          "label": "Chapter 3",
+          "title": "Matter",
+          "status": "current"
+        }
+      ]
+    }
+  ]
+}
