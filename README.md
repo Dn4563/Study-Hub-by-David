@@ -93,3 +93,12 @@ Later changes go live a minute or so after they're merged into `main`.
 ## If a course site moves
 
 If you rename a course repo, its GitHub Pages address changes and the old one stops working. Update that course's `url` in `courses.json`, and update the "Back to Study Hub" link in the kit if this hub's address changed.
+
+## The shared engine (`kit-core/`)
+
+Every study kit you own is built from `kit-core/`: the design tokens, styles, engine scripts, build script and click-through test. To change something in every kit:
+
+1. Edit it in `kit-core/` and push.
+2. In each kit repo (cloned next to this one), run `npm run sync-core` and then `npm test`, and commit the result.
+
+`kit-core/README.md` lists the content and question formats.
