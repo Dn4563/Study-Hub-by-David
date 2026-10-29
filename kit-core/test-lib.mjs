@@ -169,6 +169,23 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       assertNoErrors(unit + " " + mode);
     }
 
+    // 6b. Diagram labeling: image embedded, pins placed, partial credit
+    const dg = P.w.eval("(() => { for (let i = 0; i < PT.secs.length; i++) { const s = PT.secs[i], n = s.order.findIndex((id) => s.byId[id].type === 'diagram'); if (n >= 0) return [i, n, s.mode]; } return null; })()");
+    if (dg) {
+      P.click(P.q('.tab[data-t="' + (dg[2] === "exam" ? "exam" : "pt") + '"]'), "practice tab");
+      P.click(P.q('[data-act="ptsec"][data-i="' + dg[0] + '"]'), "diagram section");
+      P.click(P.q('[data-act="ptjump"][data-n="' + dg[1] + '"]'), "diagram question");
+      ok(P.q(".dimg img").getAttribute("src").startsWith("data:image/"), "diagram image is embedded");
+      ok(P.q(".diagram .credit"), "diagram shows its image credit");
+      const pins = P.w.eval("cur3().q.pins");
+      ok(P.qa(".pin").length === pins.length, "one numbered pin per label");
+      pins.forEach((pin, k) => P.click(P.q('[data-act="ptitem"][data-i="' + k + '"][data-v="' + (k === 0 ? (pin.ans + 1) % P.w.eval("cur3().q.labels.length") : pin.ans) + '"]'), "pin label"));
+      P.click(P.q('[data-act="ptcheck"]'), "Check diagram");
+      ok(P.qa(".pin.wrong").length === 1 && P.qa(".pin.right").length === pins.length - 1, "diagram marks each pin right or wrong");
+      ok(P.q(".pal.partial[aria-current]"), "one wrong pin gives partial credit");
+      assertNoErrors(unit + " diagram");
+    }
+
     // 7. Save and reload: progress and practice answers survive
     const knownBefore = Object.keys(P.w.eval("SAVE.known")).length;
     const store = P.storage();

@@ -136,6 +136,7 @@ function labelRowsHTML(q, s) {
           right = s.checked && sel === it.ans;
         return (
           '<li class="litem' +
+          (q.type === "diagram" ? " pinrow" : "") +
           (s.checked ? (right ? " right" : " wrong") : "") +
           '"><span class="lt"><span class="ln">' +
           (i + 1) +

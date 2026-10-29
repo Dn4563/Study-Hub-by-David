@@ -208,6 +208,7 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
 .pn { font-family: var(--sans); font-size: .8rem; font-weight: 600; color: var(--ink-2); margin-right: 6px; }
 .litems { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .litem { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: 8px 16px; align-items: center; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-sm); }
+.litem.pinrow { grid-template-columns: auto minmax(0, 1fr); }
 .litem.right { border-color: var(--ok); background: var(--ok-wash); }
 .litem.wrong { border-color: var(--bad); background: var(--bad-wash); }
 .lt { display: flex; gap: 10px; align-items: baseline; font-weight: 600; }
@@ -221,7 +222,7 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
 .lfb { grid-column: 1 / -1; font-size: .93rem; }
 .diagram { margin: 0 0 16px; }
 .dimg { position: relative; display: inline-block; max-width: 100%; background: #fff; border: 1px solid var(--rule); border-radius: var(--r-sm); }
-.dimg img { display: block; max-width: 100%; height: auto; border-radius: var(--r-sm); }
+.dimg img { display: block; max-width: 100%; max-height: 34rem; width: auto; height: auto; border-radius: var(--r-sm); }
 .pin { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #1A1D21; color: #fff; font-size: .85rem; font-weight: 700; border: 2px solid #fff; box-shadow: 0 0 0 1px #1A1D21; }
 .pin.set { background: var(--accent-l, #2C5AA0); }
 .pin.right { background: #23774A; } .pin.wrong { background: #B3261E; }
@@ -274,7 +275,7 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
   .panel, .deckblock { padding: 18px 16px; }
   .terms > div, .terms.guide > div { grid-template-columns: minmax(0, 1fr); }
   .terms.guide .know { justify-self: start; }
-  .litem { grid-template-columns: minmax(0, 1fr); }
+  .litem:not(.pinrow) { grid-template-columns: minmax(0, 1fr); }
   .tea > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .unitrow { grid-template-columns: minmax(0, 1fr) auto; padding: 16px; }
   .ulabel { grid-column: 1 / -1; }
