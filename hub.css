@@ -5,8 +5,10 @@
   --serif:"Newsreader",Georgia,"Times New Roman",serif;
   color-scheme:light dark;
 }
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{--ground:#15171A;--sheet:#202328;--ink:#ECEEF0;--ink-2:#A5ABB3;--rule:#363A40;color-scheme:dark}
 @media (prefers-color-scheme:dark){
-  :root{--ground:#15171A;--sheet:#202328;--ink:#ECEEF0;--ink-2:#A5ABB3;--rule:#363A40}
+  :root:not([data-theme="light"]){--ground:#15171A;--sheet:#202328;--ink:#ECEEF0;--ink-2:#A5ABB3;--rule:#363A40;color-scheme:dark}
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font:400 17px/1.5 var(--sans)}
@@ -17,7 +19,8 @@ h1 small{display:block;font:400 1.05rem/1.4 var(--sans);color:var(--ink-2);lette
 
 #courses{list-style:none;margin:0;padding:0;display:grid;gap:30px}
 .course{--c:var(--light);position:relative;padding-top:38px}
-@media (prefers-color-scheme:dark){.course{--c:var(--dark)}}
+:root[data-theme="dark"] .course{--c:var(--dark)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .course{--c:var(--dark)}}
 
 /* Each course is a binder divider; its tab shifts right by position, like real dividers. */
 .tab{position:absolute;top:0;left:calc(var(--i) * 30%);height:40px;margin:0;padding:7px 18px 0;
@@ -37,6 +40,14 @@ h1 small{display:block;font:400 1.05rem/1.4 var(--sans);color:var(--ink-2);lette
 .open svg{transition:transform .15s}
 .units a:hover .open svg{transform:translateX(2px)}
 
+footer{margin-top:40px;display:flex}
+.themeswitch{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:4px 0;color:var(--ink-2);font:400 .85rem/1 var(--sans);cursor:pointer}
+.themeswitch:hover{color:var(--ink)}
+.themeswitch:focus-visible{outline:2px solid var(--ink-2);outline-offset:4px;border-radius:4px}
+.themeswitch .track{position:relative;width:34px;height:20px;border-radius:999px;background:var(--rule);transition:background-color .15s}
+.themeswitch .knob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--sheet);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.themeswitch[aria-checked="true"] .track{background:var(--ink-2)}
+.themeswitch[aria-checked="true"] .knob{transform:translateX(14px)}
 .msg{background:var(--sheet);border-radius:8px;padding:18px 24px;color:var(--ink-2)}
 .msg a{color:inherit}
 

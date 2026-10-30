@@ -33,3 +33,19 @@ fetch('courses.json')
   .catch(e => {
     list.innerHTML = `<li class="msg">Couldn't load the course list (${esc(e.message)}). If you opened this file directly, run <code>npx http-server</code> in this folder and open the address it prints.</li>`;
   });
+
+// Light/dark switch at the bottom. Follows the device until you choose, then remembers your choice.
+const sw = document.getElementById('themeswitch');
+const isDark = () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+};
+const syncSwitch = () => sw.setAttribute('aria-checked', String(isDark()));
+syncSwitch();
+sw.addEventListener('click', () => {
+  const next = isDark() ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('sk:hub:theme', next); } catch (e) {}
+  syncSwitch();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncSwitch);

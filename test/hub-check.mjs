@@ -43,6 +43,16 @@ for (const [w, h] of [[390, 844], [1280, 900]]) for (const scheme of ['light', '
   }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   check(overflow <= 0, `${where}: page scrolls sideways by ${overflow}px`);
+  const before = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  await page.click('#themeswitch');
+  const after = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  check(before !== after, `${where}: theme switch did not change the colors`);
+  const chosen = await page.getAttribute('html', 'data-theme');
+  check(chosen === (scheme === 'dark' ? 'light' : 'dark'), `${where}: switch set theme to ${chosen}`);
+  await page.reload(); await page.waitForSelector('.course');
+  check(await page.getAttribute('html', 'data-theme') === chosen, `${where}: theme choice not remembered after reload`);
+  check(await page.getAttribute('#themeswitch', 'aria-checked') === String(chosen === 'dark'), `${where}: switch position wrong after reload`);
+  await page.click('#themeswitch');
   if (process.argv.includes('--shots')) await page.screenshot({ path: `hub-${w}-${scheme}.png`, fullPage: true });
   await page.close();
 }
