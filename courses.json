@@ -61,6 +61,11 @@
           "label": "Chapter 3",
           "title": "Matter",
           "status": "review"
+        },
+        {
+          "label": "Chapter 4",
+          "title": "Elements, Atoms, and Ions",
+          "status": "current"
         }
       ]
     }
