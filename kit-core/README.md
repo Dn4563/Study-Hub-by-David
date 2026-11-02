@@ -26,3 +26,7 @@ A practice section has `name`, `mode` (`practice` or `exam`), `exam` (exam secti
 | `saq` | `lead`, `src`, `parts` (`k`, `prompt`, `skill`, `model`, `tea` [topic sentence, evidence, analysis], `earns`, `weak`) |
 
 Multi-part types (`label`, `diagram`, `frq`, `saq`) earn partial credit.
+
+## Mixed Learn questions (per unit)
+
+Set `"learnMix": true` on a unit in the kit's `content/course.json` and add `asks.json` next to its cards: `{ "Term": [ { "q", "right", "wrong": [[text, why], ...], "exp" } ] }`. Learn then mixes applied and definition questions, blanks the term out of definition clues, and brings a missed term back 2 or 3 questions later in the other form. Units without the flag work as before.
