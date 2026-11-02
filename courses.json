@@ -77,6 +77,24 @@
           "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch04"
         }
       ]
+    },
+    {
+      "id": "jhist",
+      "name": "Jewish History",
+      "description": "Flashcards, lessons, practice sets and a 40-question mock test built from the class packets.",
+      "url": "https://dn4563.github.io/Jewish-History-Study-Kit/",
+      "owner": "self",
+      "accent": "#7A4E2D",
+      "accentDark": "#D9A47E",
+      "status": "active",
+      "units": [
+        {
+          "label": "Test 1",
+          "title": "Avraham to Nation",
+          "status": "current",
+          "url": "https://dn4563.github.io/Jewish-History-Study-Kit/#u1"
+        }
+      ]
     }
   ]
 }
