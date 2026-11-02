@@ -14,6 +14,7 @@ function pickDir() {
    so the right answer never stands out by length. */
 function distractors(card, n, field) {
   const target = card[field];
+  const fair = (c) => !MIX || field !== "def" || !hasTerm(c.def, card.term);
   const tiers = [
     ALL.filter((c) => c !== card && c.sec === card.sec),
     ALL.filter((c) => c !== card && c.deck === card.deck && c.sec !== card.sec),
@@ -29,7 +30,7 @@ function distractors(card, n, field) {
     const ord = close.concat(cand.filter((c) => close.indexOf(c) < 0));
     for (const c of ord) {
       if (out.length >= n) break;
-      if (c[field] !== target && !out.some((o) => o[field] === c[field])) out.push(c);
+      if (fair(c) && c[field] !== target && !out.some((o) => o[field] === c[field])) out.push(c);
     }
     if (out.length >= n) break;
   }
@@ -39,15 +40,17 @@ function distractors(card, n, field) {
    or choices, and mix in each card's applied questions. Units without it behave exactly as before. */
 const MIX = !!(UNIT && UNIT.learnMix);
 const STOP = /^(with|from|into|that|this|they|their|than|then|have|each|also|only|some|more|most)$/i;
+/* A word counts as the term when it starts with the term word's stem and adds at most a short ending
+   (isotope -> isotopes, isotopic). Longer words that merely share letters (mole -> molecules) don't. */
 function termStems(term) {
-  return (term.match(/[A-Za-z]{4,}/g) || []).filter((w) => !STOP.test(w)).map((w) => w.toLowerCase().slice(0, Math.max(4, w.length - 2)));
+  return (term.match(/[A-Za-z]{4,}/g) || []).filter((w) => !STOP.test(w)).map((w) => w.toLowerCase().slice(0, Math.max(4, w.length >= 8 ? w.length - 2 : w.length - 1)));
 }
 function maskTerm(text, term) {
   const stems = termStems(term);
   let hidden = 0;
   const out = text.replace(/[A-Za-z]+/g, (w) => {
     const lw = w.toLowerCase();
-    if (stems.some((st) => lw.startsWith(st))) {
+    if (stems.some((st) => lw.startsWith(st) && lw.length - st.length <= 3)) {
       hidden++;
       return "_____";
     }
@@ -55,8 +58,12 @@ function maskTerm(text, term) {
   });
   return { text: out, ratio: hidden / Math.max(1, (text.match(/[A-Za-z]+/g) || []).length) };
 }
-/* A definition that is mostly the term itself makes a useless clue. */
+/* Mixed units: a definition used as the clue has the term blanked out (and is skipped if that leaves too
+   little). Answer choices are never blanked: a term -> definition question is only asked when the card's
+   definition doesn't contain its own term, and wrong choices that mention the asked term are left out. */
+const hasTerm = (text, term) => maskTerm(text, term).ratio > 0;
 const clueOK = (card) => !MIX || maskTerm(card.def, card.term).ratio <= 0.2;
+const choicesOK = (card) => !MIX || !hasTerm(card.def, card.term);
 const shownDef = (c) => (MIX ? maskTerm(c.def, c.term).text : c.def);
 function askQ(card, a) {
   return {
@@ -70,13 +77,16 @@ function askQ(card, a) {
 }
 function mcQ(card, dir, nopt) {
   dir = dir || pickDir();
-  if (dir === "d2t" && !clueOK(card)) dir = "t2d";
+  const okDir = (d) => (d === "d2t" ? clueOK(card) : choicesOK(card));
+  if (!okDir(dir)) dir = dir === "d2t" ? "t2d" : "d2t";
+  /* No fair definition question for this card: ask its applied question instead. */
+  if (!okDir(dir) && card.asks && card.asks.length) return askQ(card, card.asks[Math.floor(Math.random() * card.asks.length)]);
   nopt = nopt || 4;
   const field = dir === "t2d" ? "def" : "term";
   const opts = shuf(
-    [{ t: field === "def" ? shownDef(card) : card[field], ok: true }].concat(
+    [{ t: card[field], ok: true }].concat(
       distractors(card, nopt - 1, field).map((c) => ({
-        t: field === "def" ? shownDef(c) : c[field],
+        t: c[field],
         ok: false,
         why:
           dir === "t2d"
@@ -129,7 +139,7 @@ function scQ(s, ask) {
 const hookLine = (c) => (SAVE.settings.hooks && c.hook ? '<span class="hook"><b>Hook</b> ' + esc(c.hook) + "</span>" : "");
 const fresh = (q) => (q.kind === "mc" ? mcQ(q.card, q.dir, q.options.length) : q.kind === "tf" ? tfQ(q.card) : Object.assign({}, q, { elim: [] }));
 /* A missed term comes back re-rolled: 35% chance it flips direction, always with reshuffled options. */
-const reroll = (q) => mcQ(q.card, Math.random() < 0.35 ? (q.dir === "t2d" ? "d2t" : "t2d") : q.dir, q.options.length);
+const reroll = (q) => mcQ(q.card, Math.random() < 0.35 ? (q.dir === "t2d" ? "d2t" : "t2d") : q.dir || pickDir(), Math.max(3, q.options.length));
 
 function startRun(cfg) {
   stopTM();

@@ -186,6 +186,17 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       assertNoErrors(unit + " diagram");
     }
 
+    // 6d. Mixed units: no blanks in choices; neither the right nor a wrong definition choice contains the asked term.
+    if (P.w.eval("MIX")) {
+      const leaks = P.w.eval(`(() => { const bad = []; for (let t = 0; t < 6; t++) ALL.forEach((c) => ["t2d", "d2t"].forEach((d) => {
+          const q = mcQ(c, d); if (q.kind !== "mc") return;
+          q.options.forEach((o) => { if (o.t.indexOf("_____") >= 0) bad.push(c.term + ": blank in a choice");
+            if (q.dir === "t2d" && hasTerm(o.t, c.term)) bad.push(c.term + ": choice contains the term"); });
+          if (q.dir === "d2t" && hasTerm(q.prompt, c.term)) bad.push(c.term + ": clue contains the term"); }));
+        return [...new Set(bad)]; })()`);
+      ok(!leaks.length, "definition questions never give away the term: " + leaks.slice(0, 4).join("; "));
+    }
+
     // 6c. Old unit recall: at most 1 per lesson, never in a deck's first lesson, only earlier units.
     if (P.w.eval("!!UNIT.recall") && P.w.eval("earlierUnits().length > 0")) {
       const r = P.w.eval(`(() => { let lessons = 0, withRecall = 0, bad = []; const early = earlierUnits().map((u) => u.id);
