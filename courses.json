@@ -43,12 +43,14 @@
         {
           "label": "Unit 2",
           "title": "Networks of Exchange",
-          "status": "review"
+          "status": "review",
+          "url": "https://dn4563.github.io/AP-World-History-Study-Kit/#u2"
         },
         {
           "label": "Unit 3",
           "title": "Land-Based Empires",
-          "status": "current"
+          "status": "current",
+          "url": "https://dn4563.github.io/AP-World-History-Study-Kit/#u3"
         }
       ]
     },
@@ -65,12 +67,14 @@
         {
           "label": "Chapter 3",
           "title": "Matter",
-          "status": "review"
+          "status": "review",
+          "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch03"
         },
         {
           "label": "Chapter 4",
           "title": "Elements, Atoms, and Ions",
-          "status": "current"
+          "status": "current",
+          "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch04"
         }
       ]
     }
