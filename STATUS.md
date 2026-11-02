@@ -39,7 +39,8 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
   - Removed: polyatomic ion memorization (only the definition card stays).
   - Practice Test: long answer, true/false, labeling, crossover, MCQ sets A, B and C, molar mass and moles.
   - Mock test: the format isn't confirmed. Long answer #4 says "Pb-297", probably a typo (VERIFY).
-- **World Unit 2 (Networks of Exchange):** old Learn style. The test is done. Its `core/` is older than kit-core, so run sync-core before building a new World unit.
+- **World Unit 2 (Networks of Exchange):** old Learn style. The test is done; marked "review".
+- **World Unit 3 (Land-Based Empires, 1450–1750):** `learnMix` and `recall` on. 147 cards in 6 decks plus an optional Scientific Revolution deck, each with an applied question. Built from the teacher's study guide, Pocket Dictionary, cheat sheets, slideshows 3.1–3.3 and AMSCO 3.1–3.4 (read from David's Google Drive: My PC → AP World). Mock test = 13 source-based MCQs + 3 SAQs (pick 2), the format of the real test. Two quotes (Luther thesis 86, Busbecq) are from memory and marked VERIFY. World `core/` is now synced with kit-core.
 
 ## Engine features (kit-core)
 - **Learn, Quiz and Flashcards:** Learn uses lessons of 5 cards or fewer, review questions from earlier lessons, checkpoints and trouble terms. The Quiz has a timer, and every multiple-choice question has cross-off and Lock in.
