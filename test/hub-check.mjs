@@ -41,6 +41,11 @@ for (const [w, h] of [[390, 844], [1280, 900]]) for (const scheme of ['light', '
     check(hrefs.length === c.units.length, `${where}: ${c.id} shows ${hrefs.length} units, expected ${c.units.length}`);
     c.units.forEach((u, i) => check(hrefs[i] === (u.url || c.url), `${where}: ${c.id} ${u.label} links to ${hrefs[i]}`));
   }
+  const tabsOut = await page.$$eval('.course', els => els.filter(e => {
+    const t = e.querySelector('.tab').getBoundingClientRect(), s = e.querySelector('.sheet').getBoundingClientRect();
+    return t.left < s.left - 0.5 || t.right > s.right + 0.5;
+  }).map(e => e.dataset.id));
+  check(tabsOut.length === 0, `${where}: tab sticks out past its sheet: ${tabsOut}`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   check(overflow <= 0, `${where}: page scrolls sideways by ${overflow}px`);
   const before = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);

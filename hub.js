@@ -13,10 +13,11 @@ function unitRow(c, u) {
     <span class="open">Open${chevron}</span></a></li>`;
 }
 
-function course(c, i) {
+function course(c, i, all) {
+  const p = all.length > 1 ? i / (all.length - 1) : 0;
   const note = c.owner === 'external'
     ? `<p class="note">Made by ${esc(c.maker)}. Opens in this tab; your browser's Back button returns here.</p>` : '';
-  return `<li class="course" data-id="${esc(c.id)}" style="--i:${i};--light:${esc(c.accent)};--dark:${esc(c.accentDark || c.accent)}">
+  return `<li class="course" data-id="${esc(c.id)}" style="--i:${i};--p:${p};--light:${esc(c.accent)};--dark:${esc(c.accentDark || c.accent)}">
     <h2 class="tab">${esc(c.name)}</h2>
     <div class="sheet">
       <p class="desc">${esc(c.description)}</p>${note}

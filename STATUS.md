@@ -9,6 +9,7 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
 | Hub: https://dn4563.github.io/Study-Hub-by-David/ | `Dn4563/Study-Hub-by-David` (renamed from 10th-grade-APs) | `/home/user/study-hub-by-david` |
 | Chem: https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/ | `Dn4563/Pre-AP-Chemistry-Study-Kit` | `/home/user/Pre-AP-Chemistry-Study-Kit` |
 | World: https://dn4563.github.io/AP-World-History-Study-Kit/ | `Dn4563/AP-World-History-Study-Kit` (renamed from AP-World-Unit2-Study-Kit) | `/home/user/ap-world-history-study-kit` |
+| Jewish History: https://dn4563.github.io/Jewish-History-Study-Kit/ | `Dn4563/Jewish-History-Study-Kit` | `/home/user/jewish-history-study-kit` |
 | Psych (Phineas's, link only, never edit) | brother12334/Psych-Unit-1 | none |
 
 - **Work branch** in every repo: `claude/practical-cray-jo2t43`. Publishing means pushing that branch to `main` (`git push origin claude/practical-cray-jo2t43:main`), and only after David says "push".
@@ -16,7 +17,8 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
 
 ## Repo shape
 - **Hub:**
-  - Page and data: `index.html`, `hub.css`, `hub.js`, `courses.json` (one entry per course; units listed with status current / review / ready).
+  - Page and data: `index.html`, `hub.css`, `hub.js`, `courses.json` (one entry per course; units listed with status current / review / ready; each unit's `url` ends in its hash, e.g. `#u3`, so Open goes straight to that unit).
+  - Course tabs are spread evenly from left to right (`--p` in `hub.js`), so the last tab always ends at the card's right edge; `hub-check.mjs` fails if a tab sticks out.
   - `test/hub-check.mjs`: the Playwright check, including the light/dark switch.
   - `kit-core/`: the shared engine.
     - `tokens.css`, `kit.css`
