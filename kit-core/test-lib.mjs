@@ -197,6 +197,14 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       ok(!leaks.length, "definition questions never give away the term: " + leaks.slice(0, 4).join("; "));
     }
 
+    // 6e. Mixed units: review terms don't repeat in back-to-back lessons.
+    if (P.w.eval("MIX") && P.w.eval("LESSONS.length > 8")) {
+      const rv = P.w.eval(`(() => { LESSONS.forEach((l) => (SAVE.done[l.id] = true)); let prev = [], clash = 0;
+        for (let t = 0; t < 30; t++) { startLesson(5 + (t % 3)); ACT.lquiz(); const ids = UI.L.queue.concat([UI.L.item]).filter((it) => it && it.review).map((it) => it.id);
+          if (ids.some((id) => prev.indexOf(id) >= 0)) clash++; prev = ids; } SAVE.done = {}; return clash; })()`);
+      ok(rv === 0, "review terms don't repeat in back-to-back lessons (" + rv + " repeats)");
+    }
+
     // 6c. Old unit recall: at most 1 per lesson, never in a deck's first lesson, only earlier units.
     if (P.w.eval("!!UNIT.recall") && P.w.eval("earlierUnits().length > 0")) {
       const r = P.w.eval(`(() => { let lessons = 0, withRecall = 0, bad = []; const early = earlierUnits().map((u) => u.id);
@@ -217,6 +225,14 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
           const after = ((readJSON(keyOf(COURSE.units.find((u) => u.id === q.recall.unit), "kit")) || {}).trouble || {})[q.recall.id] || 0;
           return { ok: after === b + 1, label: /^From /.test(q.ask), noRequeue: !UI.L.queue.some((it) => it.type === "recall"), firstTotal, missList: UI.L.recallMiss.length }; } return null; })()`);
       ok(res && res.ok && res.label && res.noRequeue && res.missList === 1, "a missed recall question updates the old unit, is labeled, and is not re-queued");
+      // Recall is weighted random with a cooldown: no term twice within 10 picks; a trouble term comes up more, not always.
+      const rr = P.w.eval(`(() => { const u = earlierUnits()[0], k = keyOf(u, "kit"), s0 = readJSON(k) || {}; const cards = unitCards(u);
+        writeJSON(k, Object.assign({}, s0, { trouble: { [cards[0].id]: 5 }, known: {}, recallSeen: {} }));
+        const picks = []; for (let i = 0; i < 60; i++) picks.push(pickRecall().id);
+        let repeat = 0; picks.forEach((id, i) => { if (picks.slice(Math.max(0, i - 10), i).indexOf(id) >= 0) repeat++; });
+        writeJSON(k, s0); return { repeat, distinct: new Set(picks).size, hot: picks.filter((id) => id === cards[0].id).length }; })()`);
+      ok(rr.repeat === 0, "recall never repeats a term within 10 picks (" + rr.repeat + " repeats)");
+      ok(rr.distinct >= 40, "recall spreads across many terms (" + rr.distinct + " different in 60)");
       assertNoErrors(unit + " recall");
     }
 

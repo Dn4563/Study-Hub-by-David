@@ -187,17 +187,44 @@ function unitCards(u) {
   });
   return out;
 }
+/* Weighted random pick from earlier units. Terms still in trouble there (count above 0 and not marked
+   "Got it") are 3 times as likely; everything else can come up too. A term recalled in the last 10 recall
+   questions or the last 2 days is skipped, so the same one doesn't keep coming back. */
+const RECALL_COOLDOWN_N = 10,
+  RECALL_COOLDOWN_MS = 2 * 24 * 3600 * 1000;
 function pickRecall() {
-  const cands = [];
+  const now = Date.now(),
+    cands = [];
   earlierUnits().forEach((u) => {
     const saved = readJSON(keyOf(u, "kit")) || {},
       tr = saved.trouble || {},
+      kn = saved.known || {},
       seen = saved.recallSeen || {};
-    unitCards(u).forEach((c) => cands.push({ u: u.id, id: c.id, tr: tr[c.id] || 0, seen: seen[c.id] || 0, r: Math.random() }));
+    unitCards(u).forEach((c) => cands.push({ u: u.id, id: c.id, w: tr[c.id] > 0 && !kn[c.id] ? 3 : 1, seen: seen[c.id] || 0 }));
   });
   if (!cands.length) return null;
-  cands.sort((a, b) => b.tr - a.tr || a.seen - b.seen || a.r - b.r);
-  return cands[0];
+  const recent = cands
+    .filter((c) => c.seen)
+    .sort((x, y) => y.seen - x.seen)
+    .slice(0, RECALL_COOLDOWN_N);
+  let pool = cands.filter((c) => recent.indexOf(c) < 0 && now - c.seen > RECALL_COOLDOWN_MS);
+  if (!pool.length) pool = cands.filter((c) => recent.indexOf(c) < 0);
+  if (!pool.length) pool = cands;
+  let r = Math.random() * pool.reduce((n, c) => n + c.w, 0),
+    pick = pool[pool.length - 1];
+  for (const c of pool) {
+    if ((r -= c.w) < 0) {
+      pick = c;
+      break;
+    }
+  }
+  /* Count it as recalled as soon as it is picked, so restarting a lesson doesn't pick it again. */
+  const u = COURSE.units.find((x) => x.id === pick.u),
+    k = keyOf(u, "kit"),
+    saved = readJSON(k) || {};
+  saved.recallSeen = Object.assign(saved.recallSeen || {}, { [pick.id]: now });
+  writeJSON(k, saved);
+  return pick;
 }
 function recallQ(item) {
   const u = COURSE.units.find((x) => x.id === item.unit),
@@ -292,12 +319,19 @@ ACT.lquiz = () => {
   LESSONS.forEach((l, i) => {
     if (i !== li && SAVE.done[l.id]) l.cards.forEach((c) => doneC.push(c));
   });
-  const weak = shuf(doneC.filter((c) => SAVE.trouble[c.id] > 0)),
-    other = shuf(doneC.filter((c) => !(SAVE.trouble[c.id] > 0)));
+  /* Mixed units: a term used as a review in either of the last 2 lessons sits out this one. */
+  const cool = MIX ? [].concat(...(SAVE.revHist || []).slice(-2)) : [];
+  const pool = cool.length && doneC.filter((c) => cool.indexOf(c.id) < 0).length >= 3 ? doneC.filter((c) => cool.indexOf(c.id) < 0) : doneC;
+  const weak = shuf(pool.filter((c) => SAVE.trouble[c.id] > 0)),
+    other = shuf(pool.filter((c) => !(SAVE.trouble[c.id] > 0)));
   const reviews = weak
     .concat(other)
     .slice(0, Math.min(3, doneC.length))
     .map((c) => ({ type: "card", id: c.id, review: true }));
+  if (MIX) {
+    SAVE.revHist = (SAVE.revHist || []).concat([reviews.map((r) => r.id)]).slice(-2);
+    save();
+  }
   let q = shuf(lesson.cards).map((c) => ({ type: "card", id: c.id }));
   reviews.forEach((r) => q.splice(1 + Math.floor(Math.random() * q.length), 0, r));
   if (isLastOfDeck(lesson)) {

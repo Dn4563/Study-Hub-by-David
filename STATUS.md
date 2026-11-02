@@ -35,7 +35,7 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
 ## Units
 - **Chem Chapter 3 (Matter):** old Learn style. The test is done; mark it "review".
 - **Chem Chapter 4 (Elements, Atoms, and Ions):**
-  - Learn: `learnMix` and `recall` are on. 89 cards, each with an applied question; no definition repeats its own term.
+  - Learn: `learnMix` and `recall` are on. 95 cards (including carbon and oxygen isotope examples), each with an applied question; no definition repeats its own term.
   - Removed: polyatomic ion memorization (only the definition card stays).
   - Practice Test: long answer, true/false, labeling, crossover, MCQ sets A, B and C, molar mass and moles.
   - Mock test: the format isn't confirmed. Long answer #4 says "Pb-297", probably a typo (VERIFY).
@@ -53,7 +53,7 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
   - Blanks appear in clues only, never in choices.
   - Term → definition is skipped if a definition contains its term, and wrong choices that mention the asked term are left out.
   - A missed term returns 2–3 questions later, asked the other way.
-- **`recall`** (per unit): at most 1 question from an earlier unit, in about 1 of 3 lessons, never in a deck's first lesson. It never counts against the lesson, and it updates the old unit's trouble count. There's a Settings switch.
+- **`recall`** (per unit): at most 1 question from an earlier unit, in about 1 of 3 lessons, never in a deck's first lesson. It never counts against the lesson, and it updates the old unit's trouble count. Picks are weighted random (trouble terms not marked "Got it" are 3x as likely) with a cooldown: no term again within 10 recalls or 2 days. Review questions in mixed units skip terms used in the last 2 lessons. There's a Settings switch.
 - **Storage:** progress keys are `sk:<course>:<unit>:kit` and `:pt`. Old keys migrate automatically. The hub's theme is saved in `sk:hub:theme`.
 
 ## David's standing rules (also in each repo's CLAUDE.md)
