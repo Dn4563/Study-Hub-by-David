@@ -35,14 +35,48 @@ function distractors(card, n, field) {
   }
   return out;
 }
+/* Units with "learnMix" on (set per unit in course.json) hide the term inside definitions used as questions
+   or choices, and mix in each card's applied questions. Units without it behave exactly as before. */
+const MIX = !!(UNIT && UNIT.learnMix);
+const STOP = /^(with|from|into|that|this|they|their|than|then|have|each|also|only|some|more|most)$/i;
+function termStems(term) {
+  return (term.match(/[A-Za-z]{4,}/g) || []).filter((w) => !STOP.test(w)).map((w) => w.toLowerCase().slice(0, Math.max(4, w.length - 2)));
+}
+function maskTerm(text, term) {
+  const stems = termStems(term);
+  let hidden = 0;
+  const out = text.replace(/[A-Za-z]+/g, (w) => {
+    const lw = w.toLowerCase();
+    if (stems.some((st) => lw.startsWith(st))) {
+      hidden++;
+      return "_____";
+    }
+    return w;
+  });
+  return { text: out, ratio: hidden / Math.max(1, (text.match(/[A-Za-z]+/g) || []).length) };
+}
+/* A definition that is mostly the term itself makes a useless clue. */
+const clueOK = (card) => !MIX || maskTerm(card.def, card.term).ratio <= 0.2;
+const shownDef = (c) => (MIX ? maskTerm(c.def, c.term).text : c.def);
+function askQ(card, a) {
+  return {
+    kind: "ap",
+    card: card,
+    ask: "Apply it",
+    prompt: esc(a.q),
+    options: shuf([{ t: a.right, ok: true }].concat(a.wrong.map((w) => ({ t: w[0], ok: false, why: w[1] })))),
+    explain: (a.exp ? esc(a.exp) + "<br>" : "") + "<b>" + esc(card.term) + "</b>: " + esc(card.def) + hookLine(card),
+  };
+}
 function mcQ(card, dir, nopt) {
   dir = dir || pickDir();
+  if (dir === "d2t" && !clueOK(card)) dir = "t2d";
   nopt = nopt || 4;
   const field = dir === "t2d" ? "def" : "term";
   const opts = shuf(
-    [{ t: card[field], ok: true }].concat(
+    [{ t: field === "def" ? shownDef(card) : card[field], ok: true }].concat(
       distractors(card, nopt - 1, field).map((c) => ({
-        t: c[field],
+        t: field === "def" ? shownDef(c) : c[field],
         ok: false,
         why:
           dir === "t2d"
@@ -56,7 +90,7 @@ function mcQ(card, dir, nopt) {
     card: card,
     dir: dir,
     ask: dir === "t2d" ? "Which description best matches this term?" : "Which term matches this description?",
-    prompt: dir === "t2d" ? "<b>" + esc(card.term) + "</b>" : esc(card.def),
+    prompt: dir === "t2d" ? "<b>" + esc(card.term) + "</b>" : esc(shownDef(card)),
     options: opts,
     explain: "<b>" + esc(card.term) + "</b>: " + esc(card.def) + hookLine(card),
   };

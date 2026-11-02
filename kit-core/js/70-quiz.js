@@ -97,7 +97,7 @@ ACT.qagain = () => {
   stopTM();
   ACT.qstart();
 };
-const KIND_NAME = { mc: "Multiple choice", tf: "True or false", sc: "Scenario" };
+const KIND_NAME = { mc: "Multiple choice", tf: "True or false", sc: "Scenario", ap: "Applied" };
 function breakdownHTML(R) {
   const tally = (f) => {
     const m = {};

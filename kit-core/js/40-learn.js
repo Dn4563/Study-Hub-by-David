@@ -130,7 +130,7 @@ function learnHTML() {
         (ok ? "Correct." : "Not quite.") +
         "</b> " +
         q.explain +
-        (!ok && q.card ? '<p class="muted">This term comes back in two questions.</p>' : "") +
+        (!ok && q.card ? '<p class="muted">' + (MIX ? "This term comes back in a few questions, asked a different way." : "This term comes back in two questions.") + "</p>" : "") +
         "</div>" +
         (q.kind === "tf" ? "" : whyHTML(q.options, L.picked, "")) +
         '<div class="qnav"><button class="btn" data-act="lnext">Next</button></div>';
@@ -168,7 +168,17 @@ function learnHTML() {
 }
 function learnQ(item) {
   if (item.type === "sc") return scQ(D.sq[item.idx], "Checkpoint: apply it");
-  const q = mcQ(BYID[item.id], Math.random() < 0.35 ? "t2d" : "d2t", 4);
+  const card = BYID[item.id];
+  /* Mixed units: about half the questions are applied ones when the card has them. A term that comes back
+     after a miss switches form: missed a definition question, get an applied one, and the other way round. */
+  const hasAsk = MIX && card.asks && card.asks.length;
+  const applied = hasAsk && (item.avoid === "ap" ? false : item.avoid ? true : Math.random() < 0.5);
+  if (applied) {
+    const q = askQ(card, card.asks[Math.floor(Math.random() * card.asks.length)]);
+    if (item.review) q.ask = "Review from an earlier lesson. " + q.ask;
+    return q;
+  }
+  const q = mcQ(card, Math.random() < 0.35 ? "t2d" : "d2t", 4);
   if (item.review) q.ask = "Review from an earlier lesson. " + q.ask;
   return q;
 }
@@ -250,7 +260,9 @@ function learnPick(k) {
       L.missed.add(id);
       SAVE.trouble[id] = (SAVE.trouble[id] || 0) + 1;
       setKnown(id, false);
-      L.queue.splice(Math.min(L.queue.length, 2), 0, Object.assign({}, L.item));
+      /* Mixed units bring the term back 2 or 3 questions later, in a different form; others keep the fixed 2. */
+      const gap = MIX ? 2 + Math.floor(Math.random() * 2) : 2;
+      L.queue.splice(Math.min(L.queue.length, gap), 0, Object.assign({}, L.item, MIX ? { avoid: q.kind === "ap" ? "ap" : "mc" } : {}));
     }
   } else if (!ok) {
     L.scenMiss.push(q);

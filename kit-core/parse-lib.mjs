@@ -81,6 +81,18 @@ export function parseUnit(dir) {
     watch: parseWatch(readIf(dir, "watch.md", "")),
     practice: JSON.parse(readIf(dir, "practice.json", '{"sections":[]}')),
   };
+  // asks.json (optional): { "Term": [ { "q", "right", "wrong": [[text, why], ...], "exp" } ] } adds applied questions.
+  const asks = JSON.parse(readIf(dir, "asks.json", "{}"));
+  const byTerm = {};
+  data.decks.forEach((d) => d.sections.forEach((s) => s.cards.forEach((c) => (byTerm[c.term] = c))));
+  for (const [term, list] of Object.entries(asks)) {
+    if (!byTerm[term]) throw new Error(`asks.json: no card named "${term}"`);
+    list.forEach((a, i) => {
+      if (!a.q || !a.right || !Array.isArray(a.wrong) || a.wrong.length < 2) throw new Error(`asks.json: "${term}" question ${i + 1} needs q, right and at least 2 wrong`);
+      if (a.right.length > Math.max(...a.wrong.map((w) => w[0].length))) throw new Error(`asks.json: "${term}" question ${i + 1}: the right answer is the longest choice`);
+    });
+    byTerm[term].asks = list;
+  }
   if (guide.cheat) data.cheat = guide.cheat;
   if (guide.topicDeck) data.topicDeck = guide.topicDeck;
   return data;
