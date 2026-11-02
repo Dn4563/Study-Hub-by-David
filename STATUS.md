@@ -1,0 +1,77 @@
+# Status: Study Hub and study kits
+
+## Context
+David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build from one shared engine and appear under one hub site. Everything below is live on `main` as of 2026-11-02. Read this file first in a new session. Update it when something changes.
+
+## Live sites and repos (GitHub account Dn4563)
+| Site | Repo | Local clone |
+|---|---|---|
+| Hub: https://dn4563.github.io/Study-Hub-by-David/ | `Dn4563/Study-Hub-by-David` (renamed from 10th-grade-APs) | `/home/user/study-hub-by-david` |
+| Chem: https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/ | `Dn4563/Pre-AP-Chemistry-Study-Kit` | `/home/user/Pre-AP-Chemistry-Study-Kit` |
+| World: https://dn4563.github.io/AP-World-History-Study-Kit/ | `Dn4563/AP-World-History-Study-Kit` (renamed from AP-World-Unit2-Study-Kit) | `/home/user/ap-world-history-study-kit` |
+| Psych (Phineas's, link only, never edit) | brother12334/Psych-Unit-1 | none |
+
+- **Work branch** in every repo: `claude/practical-cray-jo2t43`. Publishing means pushing that branch to `main` (`git push origin claude/practical-cray-jo2t43:main`), and only after David says "push".
+- **New sessions:** a fresh session may need `add_repo` for the two renamed repos before it can push.
+
+## Repo shape
+- **Hub:**
+  - Page and data: `index.html`, `hub.css`, `hub.js`, `courses.json` (one entry per course; units listed with status current / review / ready).
+  - `test/hub-check.mjs`: the Playwright check, including the light/dark switch.
+  - `kit-core/`: the shared engine.
+    - `tokens.css`, `kit.css`
+    - `js/00-core.js` … `99-boot.js`
+    - `build-lib.mjs`, `parse-lib.mjs`, `test-lib.mjs` (the jsdom click-through)
+- **Each kit:**
+  - `content/course.json` lists the units. Per-unit flags: `learnMix`, `recall` and `legacyKeys`.
+  - `content/<unit>/` holds the unit's files:
+    - `cards.md` (`# Deck N: Name`, `## Section`, `| Term | Definition | Hook |`)
+    - `asks.json` (applied questions per card), `watch.md`, `trees.md`, `guide.json`
+    - `scenarios.json`, `practice.json`, `images.json` with `assets/`
+    - `data.json` is generated and gitignored.
+  - `core/` is a copy of kit-core; refresh it with `npm run sync-core`.
+  - `npm test` parses, builds `index.html` and runs the click-through. `legacy/index.html` is the old hand-made page. `CLAUDE.md` holds David's rules.
+
+## Units
+- **Chem Chapter 3 (Matter):** old Learn style. The test is done; mark it "review".
+- **Chem Chapter 4 (Elements, Atoms, and Ions):**
+  - Learn: `learnMix` and `recall` are on. 89 cards, each with an applied question; no definition repeats its own term.
+  - Removed: polyatomic ion memorization (only the definition card stays).
+  - Practice Test: long answer, true/false, labeling, crossover, MCQ sets A, B and C, molar mass and moles.
+  - Mock test: the format isn't confirmed. Long answer #4 says "Pb-297", probably a typo (VERIFY).
+- **World Unit 2 (Networks of Exchange):** old Learn style. The test is done. Its `core/` is older than kit-core, so run sync-core before building a new World unit.
+
+## Engine features (kit-core)
+- **Learn, Quiz and Flashcards:** Learn uses lessons of 5 cards or fewer, review questions from earlier lessons, checkpoints and trouble terms. The Quiz has a timer, and every multiple-choice question has cross-off and Lock in.
+- **Practice Test:**
+  - palette, flags, shuffle, Retest Missed, print view
+  - partial credit for multi-part questions
+  - diagram labeling with pins on images
+  - per-exam results page
+- **`learnMix`** (per unit):
+  - Learn picks a definition or an applied question at random.
+  - Blanks appear in clues only, never in choices.
+  - Term → definition is skipped if a definition contains its term, and wrong choices that mention the asked term are left out.
+  - A missed term returns 2–3 questions later, asked the other way.
+- **`recall`** (per unit): at most 1 question from an earlier unit, in about 1 of 3 lessons, never in a deck's first lesson. It never counts against the lesson, and it updates the old unit's trouble count. There's a Settings switch.
+- **Storage:** progress keys are `sk:<course>:<unit>:kit` and `:pt`. Old keys migrate automatically. The hub's theme is saved in `sk:hub:theme`.
+
+## David's standing rules (also in each repo's CLAUDE.md)
+- **New units:** `learnMix` and `recall` on, plus `asks.json`. One fact per card, and definitions never repeat their term.
+- **Questions:**
+  - Hard. The right answer is never the longest choice, and answer letters are balanced.
+  - Every wrong choice gets a `why`, and choices are never referred to by letter.
+  - History questions lean on source analysis.
+- **Content:** don't invent content; mark anything not in his sources VERIFY.
+- **Old units:** don't change units classmates have studied (Chem Ch 3, World Unit 2) unless David asks. Review them before the midterm, final and AP exam.
+- **Publishing:** test, show screenshots and examples, and push to `main` only after David says "push".
+- **Wording:** be direct and precise; David notices word choice.
+
+## Open items
+- **Diagram licenses:** license and author for the two Chem Ch 3 diagram images (David chose to leave these for now).
+- **Old units:** bring Chem Ch 3 and World Unit 2 up to the new Learn style before the midterm, final or AP exam (ask first).
+- **Ch 4 mock test:** update it once the real test format is known.
+- **Next units:** David sends source PDFs. Read them all, report the test format and any source disagreements, propose an outline, wait for OK, then build.
+
+## See also
+The rules in `CLAUDE.md` and each kit repo's `CLAUDE.md` and `README.md`.
