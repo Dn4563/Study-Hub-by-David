@@ -22,6 +22,7 @@ function setHTML() {
     "</div>" +
     chk("hooks", "Show memory hooks") +
     (hasOpt ? chk("optDeck", "Include optional decks in All decks, the progress meter and the mixed quiz") : "") +
+    (UNIT.recall && COURSE.units.indexOf(UNIT) > 0 ? chk("recall", "Recall questions from earlier units: now and then a Learn lesson asks one question from an earlier unit. It never counts against the lesson.") : "") +
     "<h3>Answering</h3>" +
     chk("confirm", "Lock in answers: pick a choice, then press Lock in answer, so a misclick does not count. Applies to Learn, Quiz and the Practice Test.") +
     '<h3>Flashcards</h3><div class="ctl">' +

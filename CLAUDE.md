@@ -6,6 +6,7 @@ These apply to every new unit or chapter in this kit, and to any rework of an ol
 - Turn on mixed Learn questions for the unit: set `"learnMix": true` on the unit in `content/course.json`.
 - Write `asks.json` for the unit with one applied question for every card. Applied questions make you use the idea (for example "Strontium is in group 2. What charge does its ion have?"), not repeat the definition. Every wrong choice gets a `why`, and the right answer is never the longest choice. The build checks this.
 - Both kinds of questions stay: Learn picks a definition question or an applied question at random. A missed term comes back 2 or 3 questions later, asked the other way.
+- Turn on old unit recall for every unit after the first: set `"recall": true` on the unit in `content/course.json`. Learn then asks at most 1 question from an earlier unit, in about 1 of 3 lessons, never in a deck's first lesson; it never counts against the lesson.
 - For history, applied questions lean on cause, effect, comparison, continuity and change, not reciting definitions.
 
 ## Cards

@@ -80,6 +80,7 @@ const DEF = {
   dir: "both",
   focus: "unknown",
   timer: 0,
+  recall: true,
 };
 let SAVE, ALL, BYID, LESSONS, UI, TABS;
 

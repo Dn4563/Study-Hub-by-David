@@ -130,6 +130,7 @@ function learnHTML() {
         (ok ? "Correct." : "Not quite.") +
         "</b> " +
         q.explain +
+        (!ok && q.recall ? '<p class="muted">This one is from ' + esc(q.recall.label) + ". It doesn't count against this lesson.</p>" : "") +
         (!ok && q.card ? '<p class="muted">' + (MIX ? "This term comes back in a few questions, asked a different way." : "This term comes back in two questions.") + "</p>" : "") +
         "</div>" +
         (q.kind === "tf" ? "" : whyHTML(q.options, L.picked, "")) +
@@ -156,6 +157,11 @@ function learnHTML() {
         '<h3>Checkpoint questions to review</h3><ul class="missed">' +
         L.scenMiss.map((q) => "<li>" + q.prompt + " <b>" + esc(q.options.find((o) => o.ok).t) + "</b>. " + q.explain + "</li>").join("") +
         "</ul>";
+    if ((L.recallMiss || []).length)
+      h +=
+        '<h3>Earlier-unit questions to review</h3><ul class="missed">' +
+        L.recallMiss.map((q) => "<li><b>" + esc(q.recall.term) + "</b> (" + esc(q.recall.label) + "). " + q.explain + "</li>").join("") +
+        "</ul>";
     if (allDone) h += '<aside class="watch"><b>Every lesson done</b> Take the 40-question mixed quiz on everything and retry what you miss.</aside>';
     h +=
       '<div class="qnav"><button class="btn sec" data-act="lredo">Redo this lesson</button>' +
@@ -166,7 +172,75 @@ function learnHTML() {
   }
   return h;
 }
+/* ---------- old unit recall ----------
+   Units with "recall": true (course.json) occasionally ask about an earlier unit of the same course:
+   at most 1 question per lesson, in about 1 of 3 lessons, never in a deck's first lesson or its checkpoint.
+   Trouble terms from the old unit come first, then the ones recalled longest ago. */
+const RECALL_RATE = 1 / 3;
+const recallOn = () => !!(UNIT.recall && SAVE.settings.recall);
+const earlierUnits = () => COURSE.units.slice(0, COURSE.units.indexOf(UNIT));
+function unitCards(u) {
+  const out = [];
+  UNITDATA[u.id].decks.forEach((dk) => {
+    if (dk.optional) return;
+    dk.sections.forEach((sc, si) => sc.cards.forEach((c, ci) => out.push(Object.assign({}, c, { id: dk.id + "." + si + "." + ci, deck: dk.id, sec: dk.id + "." + si }))));
+  });
+  return out;
+}
+function pickRecall() {
+  const cands = [];
+  earlierUnits().forEach((u) => {
+    const saved = readJSON(keyOf(u, "kit")) || {},
+      tr = saved.trouble || {},
+      seen = saved.recallSeen || {};
+    unitCards(u).forEach((c) => cands.push({ u: u.id, id: c.id, tr: tr[c.id] || 0, seen: seen[c.id] || 0, r: Math.random() }));
+  });
+  if (!cands.length) return null;
+  cands.sort((a, b) => b.tr - a.tr || a.seen - b.seen || a.r - b.r);
+  return cands[0];
+}
+function recallQ(item) {
+  const u = COURSE.units.find((x) => x.id === item.unit),
+    cards = unitCards(u),
+    card = cards.find((c) => c.id === item.id);
+  const label = "From " + u.label + ": " + u.title + ". ";
+  let q;
+  if (u.learnMix && card.asks && card.asks.length && Math.random() < 0.5) q = askQ(card, card.asks[Math.floor(Math.random() * card.asks.length)]);
+  else {
+    const dir = Math.random() < 0.5 ? "t2d" : "d2t",
+      field = dir === "t2d" ? "def" : "term",
+      same = shuf(cards.filter((c) => c !== card && c.sec === card.sec)),
+      rest = shuf(cards.filter((c) => c !== card && c.sec !== card.sec)),
+      ds = same.concat(rest).filter((c, i, a) => c[field] !== card[field] && a.findIndex((x) => x[field] === c[field]) === i).slice(0, 3);
+    q = {
+      kind: "mc",
+      dir: dir,
+      ask: dir === "t2d" ? "Which description best matches this term?" : "Which term matches this description?",
+      prompt: dir === "t2d" ? "<b>" + esc(card.term) + "</b>" : esc(card.def),
+      options: shuf([{ t: card[field], ok: true }].concat(ds.map((c) => ({ t: c[field], ok: false, why: dir === "t2d" ? 'That describes "' + c.term + '".' : '"' + c.term + '" means: ' + c.def })))),
+      explain: "<b>" + esc(card.term) + "</b>: " + esc(card.def),
+    };
+  }
+  q.card = null;
+  q.recall = { unit: u.id, id: card.id, label: u.label + ": " + u.title, term: card.term };
+  q.ask = label + q.ask;
+  return q;
+}
+/* A recall answer updates the old unit's own saved trouble count. */
+function recallResult(r, ok) {
+  const u = COURSE.units.find((x) => x.id === r.unit),
+    k = keyOf(u, "kit"),
+    saved = readJSON(k) || {};
+  saved.trouble = saved.trouble || {};
+  saved.recallSeen = saved.recallSeen || {};
+  if (ok) saved.trouble[r.id] = Math.max(0, (saved.trouble[r.id] || 0) - 1);
+  else saved.trouble[r.id] = (saved.trouble[r.id] || 0) + 1;
+  saved.recallSeen[r.id] = Date.now();
+  writeJSON(k, saved);
+}
+
 function learnQ(item) {
+  if (item.type === "recall") return recallQ(item);
   if (item.type === "sc") return scQ(D.sq[item.idx], "Checkpoint: apply it");
   const card = BYID[item.id];
   /* Mixed units: about half the questions are applied ones when the card has them. A term that comes back
@@ -235,13 +309,28 @@ ACT.lquiz = () => {
         .map((i) => ({ type: "sc", idx: i })),
     );
   }
-  UI.L = { phase: "quiz", queue: q, cur: null, picked: null, first: 0, firstTotal: q.length, missed: new Set(), scenMiss: [], scenMissIdx: [], tried: new Set() };
+  let nRecall = 0;
+  if (recallOn() && !isFirstOfDeck(lesson) && earlierUnits().length && Math.random() < RECALL_RATE) {
+    const pick = pickRecall();
+    if (pick) {
+      const nCards = q.filter((it) => it.type !== "sc").length;
+      q.splice(1 + Math.floor(Math.random() * Math.max(1, nCards - 1)), 0, { type: "recall", unit: pick.u, id: pick.id });
+      nRecall = 1;
+    }
+  }
+  UI.L = { phase: "quiz", queue: q, cur: null, picked: null, first: 0, firstTotal: q.length - nRecall, missed: new Set(), scenMiss: [], scenMissIdx: [], recallMiss: [], tried: new Set() };
   nextLearnQ();
 };
 function learnPick(k) {
   const L = UI.L;
   if (!L || L.phase !== "quiz" || L.picked !== null || UI.run) return;
   L.picked = k;
+  if (L.cur.recall) {
+    const ok = !!L.cur.options[k].ok;
+    recallResult(L.cur.recall, ok);
+    if (!ok) (L.recallMiss = L.recallMiss || []).push(L.cur);
+    return render();
+  }
   const q = L.cur,
     ok = !!q.options[k].ok,
     key = L.item.type === "sc" ? "s" + L.item.idx : L.item.id,
@@ -329,7 +418,9 @@ function restoreL() {
     }
     const L = {
       phase: p.phase,
-      queue: (p.queue || []).filter((it) => (it.type === "sc" ? D.sq[it.idx] : BYID[it.id])),
+      queue: (p.queue || []).filter((it) =>
+        it.type === "sc" ? D.sq[it.idx] : it.type === "recall" ? COURSE.units.some((u) => u.id === it.unit && UNITDATA[u.id]) : BYID[it.id],
+      ),
       cur: null,
       picked: null,
       first: p.first || 0,

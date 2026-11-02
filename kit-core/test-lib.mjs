@@ -186,6 +186,29 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       assertNoErrors(unit + " diagram");
     }
 
+    // 6c. Old unit recall: at most 1 per lesson, never in a deck's first lesson, only earlier units.
+    if (P.w.eval("!!UNIT.recall") && P.w.eval("earlierUnits().length > 0")) {
+      const r = P.w.eval(`(() => { let lessons = 0, withRecall = 0, bad = []; const early = earlierUnits().map((u) => u.id);
+        for (let t = 0; t < 300; t++) { const i = t % LESSONS.length; startLesson(i); ACT.lquiz();
+          const items = UI.L.queue.concat(UI.L.item ? [UI.L.item] : []).filter((it) => it.type === "recall");
+          lessons++; if (items.length) withRecall++;
+          if (items.length > 1) bad.push("lesson " + i + " has " + items.length);
+          if (items.length && isFirstOfDeck(LESSONS[i])) bad.push("recall in first lesson of a deck");
+          items.forEach((it) => early.indexOf(it.unit) < 0 && bad.push("recall from " + it.unit)); }
+        return { lessons, withRecall, bad }; })()`);
+      ok(!r.bad.length, "recall limits: " + r.bad.slice(0, 3).join("; "));
+      ok(r.withRecall > 0 && r.withRecall / r.lessons < 0.5, "recall shows up now and then (" + r.withRecall + " of " + r.lessons + " lessons)");
+      // A wrong recall answer raises that term's trouble count in its own unit, not this one.
+      const res = P.w.eval(`(() => { for (let t = 0; t < 200; t++) { startLesson(t % LESSONS.length); if (isFirstOfDeck(LESSONS[t % LESSONS.length])) continue; ACT.lquiz();
+          const L = UI.L, j = L.queue.findIndex((it) => it.type === "recall"); if (j < 0) continue;
+          L.queue.splice(0, j); nextLearnQ(); const q = UI.L.cur, before = (readJSON(keyOf(COURSE.units.find((u) => u.id === q.recall.unit), "kit")) || {}).trouble || {};
+          const b = before[q.recall.id] || 0, firstTotal = UI.L.firstTotal; learnPick(q.options.findIndex((o) => !o.ok));
+          const after = ((readJSON(keyOf(COURSE.units.find((u) => u.id === q.recall.unit), "kit")) || {}).trouble || {})[q.recall.id] || 0;
+          return { ok: after === b + 1, label: /^From /.test(q.ask), noRequeue: !UI.L.queue.some((it) => it.type === "recall"), firstTotal, missList: UI.L.recallMiss.length }; } return null; })()`);
+      ok(res && res.ok && res.label && res.noRequeue && res.missList === 1, "a missed recall question updates the old unit, is labeled, and is not re-queued");
+      assertNoErrors(unit + " recall");
+    }
+
     // 7. Save and reload: progress and practice answers survive
     const knownBefore = Object.keys(P.w.eval("SAVE.known")).length;
     const store = P.storage();
