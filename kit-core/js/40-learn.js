@@ -7,6 +7,11 @@ const isLastOfDeck = (l) => {
   return ls[ls.length - 1] === l;
 };
 const isFirstOfDeck = (l) => LESSONS.filter((x) => x.deck === l.deck)[0] === l;
+/* A section split into 2+ lessons ends with a short section review (5 questions on the whole section). */
+const SR_N = 5;
+const hasSecReview = (l) => l.parts > 1 && l.part === l.parts - 1;
+const secCards = (sec) => LESSONS.filter((x) => x.sec === sec).reduce((a, x) => a.concat(x.cards), []);
+const srBadge = (sec) => (SAVE.secRev && SAVE.secRev[sec] ? '<span class="srb">review ' + SAVE.secRev[sec].best + "/" + SAVE.secRev[sec].n + "</span>" : "");
 function setKnown(id, v) {
   if (v) SAVE.known[id] = true;
   else delete SAVE.known[id];
@@ -65,6 +70,7 @@ function learnHTML() {
                   ">" +
                   (SAVE.done[l.id] ? ICON.check : "") +
                   esc(l.title) +
+                  (hasSecReview(l) ? srBadge(l.sec) : "") +
                   "</button>"
                 : "",
             ).join("") +
@@ -102,7 +108,7 @@ function learnHTML() {
       left = L.queue.length + (answered ? 0 : 1);
     h +=
       '<section class="panel"><div class="rtop"><span class="muted">' +
-      esc(lesson.title) +
+      esc(L.sr ? "Section review: " + lesson.secName : lesson.title) +
       '</span><span class="muted">' +
       left +
       " left</span></div>" +
@@ -136,6 +142,32 @@ function learnHTML() {
         (q.kind === "tf" ? "" : whyHTML(q.options, L.picked, "")) +
         '<div class="qnav"><button class="btn" data-act="lnext">Next</button></div>';
     h += '</section><p class="kbd">Keys: A to D or 1 to 4 picks a choice. Enter locks it in, then goes to the next question.</p>';
+  } else if (L.phase === "srsum") {
+    const missed = [...L.missed].map((id) => BYID[id]),
+      last = li >= LESSONS.length - 1,
+      nxt = LESSONS[li + 1],
+      best = SAVE.secRev[lesson.sec];
+    h +=
+      '<section class="panel"><p class="deckname">' +
+      dot(lesson.deck) +
+      esc(dk.name) +
+      "</p><h2>Section review: " +
+      esc(lesson.secName) +
+      '</h2><p class="scorebig">' +
+      L.first +
+      " of " +
+      L.firstTotal +
+      '</p><p class="muted">right on the first try' +
+      (best ? ". Your best on this section: " + best.best + " of " + best.n + "." : ".") +
+      (missed.length ? " Look at these again:" : " The whole section is solid.") +
+      "</p>";
+    if (missed.length) h += '<ul class="missed">' + missed.map((c) => "<li><b>" + esc(c.term) + "</b> " + esc(c.def) + "</li>").join("") + "</ul>";
+    h +=
+      '<div class="qnav"><button class="btn sec" data-act="srstart">Redo the section review</button>' +
+      (last
+        ? '<button class="btn" data-act="lfinal">Take the final mixed quiz</button>'
+        : '<button class="btn" data-act="lgo" data-i="' + (li + 1) + '">Next lesson: ' + esc(nxt.title) + "</button>") +
+      "</div></section>";
   } else {
     const missed = [...L.missed].map((id) => BYID[id]),
       allDone = nDone === LESSONS.length,
@@ -163,12 +195,29 @@ function learnHTML() {
         L.recallMiss.map((q) => "<li><b>" + esc(q.recall.term) + "</b> (" + esc(q.recall.label) + "). " + q.explain + "</li>").join("") +
         "</ul>";
     if (allDone) h += '<aside class="watch"><b>Every lesson done</b> Take the 40-question mixed quiz on everything and retry what you miss.</aside>';
-    h +=
-      '<div class="qnav"><button class="btn sec" data-act="lredo">Redo this lesson</button>' +
-      (last
-        ? '<button class="btn" data-act="lfinal">Take the final mixed quiz</button>'
-        : '<button class="btn" data-act="lgo" data-i="' + (li + 1) + '">Next lesson: ' + esc(nxt.title) + "</button>") +
-      "</div></section>";
+    if (hasSecReview(lesson))
+      h +=
+        '<aside class="watch"><b>Section review: ' +
+        esc(lesson.secName) +
+        "</b> You finished every part of this section. Take " +
+        SR_N +
+        " quick questions on all of it before moving on.</aside>" +
+        '<div class="qnav"><button class="btn sec" data-act="lredo">Redo this lesson</button><button class="btn sec" data-act="' +
+        (last ? "lfinal" : "lgo") +
+        '" data-i="' +
+        (li + 1) +
+        '">' +
+        (last ? "Skip to the final mixed quiz" : "Skip to next lesson") +
+        '</button><button class="btn" data-act="srstart">Section review: ' +
+        SR_N +
+        " questions</button></div></section>";
+    else
+      h +=
+        '<div class="qnav"><button class="btn sec" data-act="lredo">Redo this lesson</button>' +
+        (last
+          ? '<button class="btn" data-act="lfinal">Take the final mixed quiz</button>'
+          : '<button class="btn" data-act="lgo" data-i="' + (li + 1) + '">Next lesson: ' + esc(nxt.title) + "</button>") +
+        "</div></section>";
   }
   return h;
 }
@@ -294,7 +343,16 @@ function startLesson(i) {
 function nextLearnQ() {
   const L = UI.L;
   if (!L.queue.length) {
-    SAVE.done[LESSONS[LI()].id] = true;
+    const lesson = LESSONS[LI()];
+    if (L.sr) {
+      const prev = SAVE.secRev[lesson.sec];
+      if (!prev || L.first >= prev.best) SAVE.secRev[lesson.sec] = { best: L.first, n: L.firstTotal };
+      save();
+      L.phase = "srsum";
+      render();
+      return;
+    }
+    SAVE.done[lesson.id] = true;
     save();
     L.phase = "summary";
     render();
@@ -312,6 +370,17 @@ ACT.lmap = () => {
 };
 ACT.lgo = (t) => startLesson(Number(t.dataset.i));
 ACT.lredo = () => startLesson(LI());
+/* Section review: SR_N cards from the whole section, trouble terms first (in random order), then the rest. */
+ACT.srstart = () => {
+  const lesson = LESSONS[LI()];
+  const cards = secCards(lesson.sec);
+  const weak = shuf(cards.filter((c) => SAVE.trouble[c.id] > 0)),
+    other = shuf(cards.filter((c) => !(SAVE.trouble[c.id] > 0)));
+  const q = shuf(weak.concat(other).slice(0, Math.min(SR_N, cards.length))).map((c) => ({ type: "card", id: c.id }));
+  UI.L = { phase: "quiz", sr: true, queue: q, cur: null, picked: null, first: 0, firstTotal: q.length, missed: new Set(), scenMiss: [], scenMissIdx: [], recallMiss: [], tried: new Set() };
+  window.scrollTo(0, 0);
+  nextLearnQ();
+};
 ACT.lquiz = () => {
   const li = LI(),
     lesson = LESSONS[li];
@@ -434,7 +503,7 @@ function packL() {
   const L = UI.L;
   if (!L) return null;
   if (L.phase === "teach") return { phase: "teach" };
-  const o = { phase: L.phase, first: L.first, firstTotal: L.firstTotal, missed: [...L.missed], tried: [...L.tried], scen: L.scenMissIdx || [] };
+  const o = { phase: L.phase, sr: !!L.sr, first: L.first, firstTotal: L.firstTotal, missed: [...L.missed], tried: [...L.tried], scen: L.scenMissIdx || [] };
   if (L.phase === "quiz") {
     const q = L.queue.slice();
     if (L.item && L.picked === null) q.unshift(L.item);
@@ -452,6 +521,7 @@ function restoreL() {
     }
     const L = {
       phase: p.phase,
+      sr: !!p.sr,
       queue: (p.queue || []).filter((it) =>
         it.type === "sc" ? D.sq[it.idx] : it.type === "recall" ? COURSE.units.some((u) => u.id === it.unit && UNITDATA[u.id]) : BYID[it.id],
       ),

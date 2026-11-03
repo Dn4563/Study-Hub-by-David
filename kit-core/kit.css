@@ -165,7 +165,13 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent);
 .fterm { font: 600 2rem/1.15 var(--serif); }
 .fdef { font-size: 1.15rem; max-width: 50ch; }
 .fcard small { color: var(--ink-2); }
-.fcnav .btn { flex: 1 1 10rem; }
+.fcnav .btn { flex: 1 1 8rem; }
+.fctools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.fctools [aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.fcprog { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 12px; }
+.fcprog .muted { flex: none; font-size: .92rem; }
+.fcprog .bar { flex: 1 1 140px; }
+.srb { margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-size: .8rem; font-weight: 600; white-space: nowrap; }
 
 /* forms */
 .form fieldset { border: 0; padding: 0; margin: 18px 0 0; }

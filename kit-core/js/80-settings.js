@@ -58,7 +58,7 @@ function SET(t) {
     SAVE.li = Math.min(SAVE.li || 0, LESSONS.length - 1);
   }
   save();
-  if (["fcPool", "fcOrder", "fcFirst", "optDeck"].indexOf(k) >= 0) FC = null;
+  if (["fcPool", "fcOrder", "fcFirst", "fcMode", "optDeck"].indexOf(k) >= 0) FC = null;
   render();
 }
 document.addEventListener("change", (e) => {
@@ -78,7 +78,7 @@ document.addEventListener("input", (e) => {
 });
 ACT.exp = () => {
   const e = document.getElementById("xport");
-  e.value = JSON.stringify({ course: COURSE.id, unit: UNIT.id, known: SAVE.known, trouble: SAVE.trouble, done: SAVE.done, li: SAVE.li, settings: SAVE.settings, pt: PTpack() });
+  e.value = JSON.stringify({ course: COURSE.id, unit: UNIT.id, known: SAVE.known, trouble: SAVE.trouble, done: SAVE.done, li: SAVE.li, secRev: SAVE.secRev, star: SAVE.star, settings: SAVE.settings, pt: PTpack() });
   e.select();
 };
 ACT.imp = () => {
@@ -90,6 +90,8 @@ ACT.imp = () => {
     SAVE.trouble = o.trouble || {};
     SAVE.done = o.done || {};
     SAVE.li = o.li || 0;
+    SAVE.secRev = o.secRev || {};
+    SAVE.star = o.star || {};
     const s = Object.assign({}, o.settings || {});
     delete s.theme;
     delete s.size;
@@ -112,6 +114,8 @@ ACT.resetall = () => {
   SAVE.trouble = {};
   SAVE.done = {};
   SAVE.li = 0;
+  SAVE.secRev = {};
+  SAVE.revHist = [];
   UI.L = null;
   FC = null;
   PTreset();

@@ -76,6 +76,7 @@ const DEF = {
   fcPool: "unknown",
   fcOrder: "shuffle",
   fcFirst: "term",
+  fcMode: "sort",
   qType: "mixed",
   dir: "both",
   focus: "unknown",
@@ -85,7 +86,7 @@ const DEF = {
 let SAVE, ALL, BYID, LESSONS, UI, TABS;
 
 function loadSave() {
-  SAVE = { settings: Object.assign({}, DEF), known: {}, trouble: {}, done: {}, li: 0 };
+  SAVE = { settings: Object.assign({}, DEF), known: {}, trouble: {}, done: {}, li: 0, revHist: [], secRev: {}, star: {} };
   const o = readJSON(LSK);
   if (!o) return;
   SAVE.known = o.known || {};
@@ -93,6 +94,9 @@ function loadSave() {
   SAVE.done = o.done || {};
   SAVE.li = o.li || 0;
   SAVE.ui = o.ui || null;
+  SAVE.revHist = o.revHist || [];
+  SAVE.secRev = o.secRev || {};
+  SAVE.star = o.star || {};
   const s = o.settings || {};
   /* Older kits kept theme and size per kit; carry them over once. */
   if (!readJSON(PREFK) && (s.theme || s.size !== undefined)) {
@@ -142,6 +146,10 @@ function rebuild() {
         LESSONS.push({
           id: dk.id + "." + si + "." + p,
           deck: dk.id,
+          sec: dk.id + "." + si,
+          secName: sc.name,
+          part: p,
+          parts: parts,
           title: sc.name + (parts > 1 ? " (part " + (p + 1) + " of " + parts + ")" : ""),
           cards: sc.cards.slice(i, i + sz),
         });
@@ -296,6 +304,8 @@ ACT.resetprog = () => {
   SAVE.trouble = {};
   SAVE.done = {};
   SAVE.li = 0;
+  SAVE.secRev = {};
+  SAVE.revHist = [];
   UI.L = null;
   save();
   FC = null;

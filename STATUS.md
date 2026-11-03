@@ -47,6 +47,8 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
 
 ## Engine features (kit-core)
 - **Learn, Quiz and Flashcards:** Learn uses lessons of 5 cards or fewer, review questions from earlier lessons, checkpoints and trouble terms. The Quiz has a timer, and every multiple-choice question has cross-off and Lock in.
+- **Section review (Learn):** when a section is split into 2+ lessons, its last lesson offers a 5-question review of the whole section (trouble terms first, Skip button). Best score per section is saved (`SAVE.secRev`) and shown in the lesson map.
+- **Flashcards (Quizlet-style):** Sort mode (Not yet / Got it) with ← Back that undoes the last choice, or Browse mode (Previous / Next); Swap sides button; ☆ Star with a Starred pool; Shuffle, Restart, counter and progress bar; round results with "Keep reviewing" the still-learning cards. Keys: Space/↑/↓ flip, → Got it or Next, ← Back or Previous, 1 Not yet, 2 Got it, S star. No audio yet.
 - **Practice Test:**
   - palette, flags, shuffle, Retest Missed, print view
   - partial credit for multi-part questions

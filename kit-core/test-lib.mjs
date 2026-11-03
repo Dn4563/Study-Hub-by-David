@@ -97,6 +97,42 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     ok(Object.keys(P.w.eval("SAVE.trouble")).length > 0, "missed term became a trouble term");
     assertNoErrors(unit + " lesson");
 
+    // 3b. Section review: the last part of a section split into 2+ lessons offers a short review on the whole section
+    const srIdx = P.w.eval("LESSONS.findIndex(l => l.parts > 1 && l.part === l.parts - 1)");
+    const soloIdx = P.w.eval("LESSONS.findIndex(l => l.parts === 1)");
+    const runLesson = (what) => {
+      let g = 0;
+      while (P.q('[data-act="lopt"]') && g++ < 60) {
+        const right = P.w.eval("UI.L.cur.options.findIndex(o => o.ok)");
+        P.click(P.qa('[data-act="lopt"]')[right], what + " option");
+        if (P.q('[data-act="lconfirm"]')) P.click(P.q('[data-act="lconfirm"]'), "Lock in");
+        P.click(P.q('[data-act="lnext"]'), "Next");
+      }
+    };
+    if (soloIdx >= 0) {
+      P.w.eval("startLesson(" + soloIdx + ")");
+      P.click(P.q('[data-act="lquiz"]'), "Quiz me (one-part section)");
+      runLesson("one-part lesson");
+      ok(P.q(".scorebig") && !P.q('[data-act="srstart"]'), "a one-part section has no section review");
+    }
+    if (srIdx >= 0) {
+      P.w.eval("startLesson(" + srIdx + ")");
+      P.click(P.q('[data-act="lquiz"]'), "Quiz me (last part)");
+      runLesson("last-part lesson");
+      P.click(P.q('[data-act="srstart"]'), "Section review button");
+      const n = P.w.eval("UI.L.queue.length + 1");
+      ok(n === Math.min(5, P.w.eval("secCards(LESSONS[" + srIdx + "].sec).length")), "section review has 5 questions (or the whole section if smaller)");
+      ok(/Section review/.test(P.q("main .panel .rtop").textContent), "section review is labeled");
+      runLesson("section review");
+      ok(/Section review/.test(P.q("main h2").textContent) && P.q(".scorebig"), "section review results shown");
+      const rec = P.w.eval("SAVE.secRev[LESSONS[" + srIdx + "].sec]");
+      ok(rec && rec.best === rec.n, "section review score saved");
+      P.click(P.q('[data-act="lmap"]'), "Lesson map");
+      ok(P.q(".lmap .srb"), "lesson map shows the section review score");
+      P.click(P.q('[data-act="lmap"]'), "close Lesson map");
+    }
+    assertNoErrors(unit + " section review");
+
     // 4. Quiz builder with immediate feedback, then results and retry
     P.click(P.q('.tab[data-t="quiz"]'), "Quiz tab");
     P.click(P.q('[data-act="qstart"]'), "Start quiz");
@@ -114,12 +150,45 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     if (P.q('[data-act="rretry"]')) P.click(P.q('[data-act="rretry"]'), "Retry missed");
     assertNoErrors(unit + " quiz");
 
-    // 5. Flashcards
+    // 5. Flashcards (Quizlet-style): flip, sort, Back undoes, swap sides, star, browse, round results
     P.click(P.q('.tab[data-t="flash"]'), "Flashcards tab");
+    P.change(P.q('select[data-set="fcPool"]'), "all");
     if (P.q('[data-act="fcgot"]')) {
       P.click(P.q('[data-act="fcflip"]'), "flip");
+      const id0 = P.w.eval("FC.q[0]"),
+        known0 = P.w.eval("!!SAVE.known['" + id0 + "']");
       P.click(P.q('[data-act="fcgot"]'), "Got it");
+      ok(P.w.eval("FC.q[0]") !== id0 && P.w.eval("!!SAVE.known['" + id0 + "']"), "Got it moves on and marks the card known");
+      P.click(P.q('[data-act="fcback"]'), "Back");
+      ok(P.w.eval("FC.q[0]") === id0 && P.w.eval("!!SAVE.known['" + id0 + "']") === known0, "Back returns the card and undoes Got it");
+      const tr0 = P.w.eval("SAVE.trouble['" + id0 + "'] || 0");
       P.click(P.q('[data-act="fcnot"]'), "Not yet");
+      P.click(P.q('[data-act="fcback"]'), "Back after Not yet");
+      ok((P.w.eval("SAVE.trouble['" + id0 + "'] || 0")) === tr0 && P.w.eval("FC.q[0]") === id0, "Back undoes Not yet");
+      const side0 = P.w.eval("SAVE.settings.fcFirst"),
+        face0 = P.q(".fcard").textContent;
+      P.click(P.q('[data-act="fcswap"]'), "Swap sides");
+      ok(P.w.eval("SAVE.settings.fcFirst") !== side0 && P.q(".fcard").textContent !== face0, "Swap sides shows the other side first");
+      P.click(P.q('[data-act="fcswap"]'), "Swap back");
+      P.click(P.q('[data-act="fcstar"]'), "Star");
+      ok(P.w.eval("!!SAVE.star['" + id0 + "']"), "star saved");
+      P.change(P.q('select[data-set="fcPool"]'), "starred");
+      ok(P.w.eval("FC.q.length") === 1 && P.w.eval("FC.q[0]") === id0, "Starred pool holds the starred card");
+      P.click(P.q('[data-act="fcnot"]'), "Not yet in starred pool");
+      P.click(P.q('[data-act="fcgot"]'), "Got it in starred pool");
+      ok(/Round done/.test(P.q("main").textContent) && P.q('[data-act="fclearn"]'), "round results with Keep reviewing");
+      P.click(P.q('[data-act="fclearn"]'), "Keep reviewing");
+      ok(P.w.eval("FC.q.length") === 1, "Keep reviewing restarts with the still-learning cards");
+      P.click(P.q('[data-act="fcstar"]'), "Unstar");
+      P.change(P.q('select[data-set="fcPool"]'), "all");
+      P.change(P.q('select[data-set="fcMode"]'), "browse");
+      ok(P.q('[data-act="fcprev"]').disabled && !P.q('[data-act="fcgot"]'), "Browse mode: Previous/Next, no sorting");
+      P.click(P.q('[data-act="fcnext"]'), "Next");
+      ok(P.w.eval("FC.i") === 1, "Next moves forward");
+      P.click(P.q('[data-act="fcprev"]'), "Previous");
+      ok(P.w.eval("FC.i") === 0, "Previous moves back");
+      P.change(P.q('select[data-set="fcMode"]'), "sort");
+      P.change(P.q('select[data-set="fcPool"]'), "unknown");
     }
     assertNoErrors(unit + " flashcards");
 
