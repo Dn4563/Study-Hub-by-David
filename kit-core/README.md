@@ -2,6 +2,8 @@
 
 The shared engine and design system for every study kit. A fix or feature made here reaches every kit the next time that kit runs `npm run sync-core` and rebuilds.
 
+License: MIT, copyright David Noskow (see `LICENSE`). It covers the engine only, not course content. Every kit page shows the line "Study kit engine by David Noskow"; copies must keep it.
+
 | File | What it is |
 |---|---|
 | `tokens.css` | Colors, fonts, radii and motion speeds. Light and dark values. The course accent comes from the kit's `course.json`. |

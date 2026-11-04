@@ -65,6 +65,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
   const units = course.units.map((u) => u.id);
   ok(P.qa(".unitrow").length === units.length, "home lists every unit");
   ok(P.q(".hublink") && P.q(".hublink").getAttribute("href") === course.hub, "home links back to the Study Hub");
+  ok(P.q(".credit a") && P.q(".credit a").getAttribute("href") === "https://dn4563.github.io/Study-Hub-by-David/" && /David Noskow/.test(P.q(".credit").textContent), "home shows the engine credit");
   assertNoErrors("home");
   P.close();
 
@@ -72,6 +73,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     // 2. Every tab renders
     P = open(unit);
     ok(P.q("h1"), "unit header");
+    ok(P.q(".credit a") && /David Noskow/.test(P.q(".credit").textContent), "unit page shows the engine credit");
     const tabs = P.qa(".tab").map((t) => t.dataset.t);
     for (const t of tabs) {
       P.click(P.q('.tab[data-t="' + t + '"]'), "tab " + t);

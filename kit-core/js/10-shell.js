@@ -3,6 +3,12 @@ function hubLink() {
   return COURSE.hub ? '<a class="hublink" href="' + esc(COURSE.hub) + '">' + ICON.back + "Study Hub</a>" : "<span></span>";
 }
 
+/* Credit line on every kit page. The engine is MIT-licensed (kit-core/LICENSE): copies must keep this line. */
+const CREDIT_URL = "https://dn4563.github.io/Study-Hub-by-David/";
+function creditLine() {
+  return '<footer class="credit">Study kit engine by <a href="' + CREDIT_URL + '">David Noskow</a></footer>';
+}
+
 function unitProgress(u) {
   const data = UNITDATA[u.id],
     saved = readJSON(keyOf(u, "kit")) || {},
@@ -60,7 +66,7 @@ function homeHTML() {
       ICON.chev +
       "</span></a></li>";
   });
-  return h + "</ul></main>";
+  return h + "</ul></main>" + creditLine();
 }
 
 function renderHome() {
@@ -271,7 +277,7 @@ function render() {
         )
         .join("") +
       "</div>";
-  h += '<main id="main">' + view() + "</main>";
+  h += '<main id="main">' + view() + "</main>" + creditLine();
   document.getElementById("app").innerHTML = h;
   persistUI();
 }
