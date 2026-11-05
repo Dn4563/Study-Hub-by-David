@@ -21,3 +21,4 @@ These apply to every new unit or chapter in this kit, and to any rework of an ol
 - Don't invent content. Mark anything not in David's sources VERIFY.
 - Run `npm test`, show screenshots and examples, and wait for David's OK before pushing to `main`.
 - Keep `STATUS.md` in the Study-Hub-by-David repo up to date after every change. Also tell David in the chat, in a few short lines, what changed, which site and file it is in, and what was updated in `STATUS.md`. He does not read the whole status file.
+- Before building anything, describe the plan to David in the chat in plain words (what will change, where, and how it will work) and wait for his OK.
