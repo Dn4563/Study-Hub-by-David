@@ -83,6 +83,14 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
 
     // 3. One full lesson, answering wrong once so the retry path runs
     P.click(P.q('.tab[data-t="learn"]'), "Learn tab");
+    const hasIntros = P.w.eval("D.decks.some((dk) => (dk.intro || []).some(Boolean) || dk.sections.some((s) => (s.intro || []).some(Boolean)))");
+    if (hasIntros) {
+      const firstIntro = P.w.eval("(D.decks[0].intro || []).some(Boolean) || (D.decks[0].sections[0].intro || []).some(Boolean)");
+      if (firstIntro) ok(P.q(".intro"), "first lesson shows its intro before the terms");
+      P.click(P.q('.tab[data-t="guide"]'), "Study guide tab");
+      ok(P.qa(".intro").length > 0, "study guide shows the intros");
+      P.click(P.q('.tab[data-t="learn"]'), "Learn tab");
+    }
     P.click(P.q('[data-act="lquiz"]'), "Quiz me");
     let guard = 0,
       missedOnce = false;

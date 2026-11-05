@@ -14,12 +14,14 @@ function guideHTML() {
   D.decks
     .filter((d) => !UI.deck || d.id === UI.deck)
     .forEach((dk) => {
-      h += '<section class="deckblock"><h2>' + dot(dk.id) + esc(dk.name) + "</h2>";
+      h += '<section class="deckblock"><h2>' + dot(dk.id) + esc(dk.name) + "</h2>" + storyHTML(dk.intro, "The big picture", "bigpic");
       dk.sections.forEach((sc) => {
         h +=
           "<h3>" +
           esc(sc.name) +
-          '</h3><dl class="terms guide">' +
+          "</h3>" +
+          storyHTML(sc.intro, "The story") +
+          '<dl class="terms guide">' +
           sc.cards
             .map(
               (c) =>

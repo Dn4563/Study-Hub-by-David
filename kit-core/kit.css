@@ -297,3 +297,12 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
   .tabs, .chips, .topbar, .meter, .noprint, .qnav, .ptctl { display: none !important; }
   .panel, .deckblock { border: 0; padding: 0; }
 }
+
+/* Plain-language intros (deck big picture, section story) */
+.intro { margin: 12px 0 16px; padding: 12px 16px; border-left: 4px solid var(--accent); background: var(--sunk); border-radius: var(--r-sm); }
+.intro p { margin: 0 0 8px; line-height: 1.6; }
+.intro p:last-child { margin-bottom: 0; }
+.intro .introhead { font-weight: 700; font-size: .92rem; color: var(--accent); margin-bottom: 6px; }
+.intro.bigpic { background: transparent; border: 1px solid var(--rule); border-left: 4px solid var(--accent); }
+.introfold { margin: 8px 0 12px; }
+.introfold summary { cursor: pointer; font-weight: 600; color: var(--accent); }

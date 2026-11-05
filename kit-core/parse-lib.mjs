@@ -37,6 +37,16 @@ export function parseCards(md, file = "cards.md") {
       if (!deck) throw new Error(`${where}: section before any "# Deck" heading`);
       sec = { name: m[1], cards: [] };
       deck.sections.push(sec);
+    } else if (line.startsWith(">")) {
+      // "> text" right under a deck or section heading = a plain-language intro shown before the terms.
+      const target = sec || deck;
+      if (!target) throw new Error(`${where}: intro text before any heading`);
+      if (sec && sec.cards.length) throw new Error(`${where}: intro text must come before the section's table`);
+      const t = line.replace(/^>\s?/, "").trim();
+      target.intro = target.intro || [];
+      if (!t) target.intro.push("");
+      else if (target.intro.length && target.intro[target.intro.length - 1]) target.intro[target.intro.length - 1] += " " + t;
+      else target.intro.push(t);
     } else if (line.trim().startsWith("|")) {
       const cells = splitRow(line);
       if (/^-+$/.test(cells[0].replace(/:/g, "")) || (cells[0] === "Term" && cells[1] === "Definition")) return;

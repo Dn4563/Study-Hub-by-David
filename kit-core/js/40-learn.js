@@ -6,6 +6,21 @@ const isLastOfDeck = (l) => {
   const ls = LESSONS.filter((x) => x.deck === l.deck);
   return ls[ls.length - 1] === l;
 };
+/* Plain-language intros from cards.md ("> " lines): the deck's big picture and each section's story. */
+function storyHTML(paras, title, cls) {
+  const ps = (paras || []).filter(Boolean);
+  if (!ps.length) return "";
+  return '<div class="intro ' + (cls || "") + '"><p class="introhead">' + esc(title) + "</p>" + ps.map((p) => "<p>" + esc(p) + "</p>").join("") + "</div>";
+}
+function secObj(l) {
+  const dk = D.decks.find((d) => d.id === l.deck),
+    si = Number(String(l.sec).split(".").pop());
+  return dk ? dk.sections[si] : null;
+}
+const sc0 = (l) => {
+  const sc = secObj(l);
+  return (sc && sc.intro && sc.intro.some(Boolean) && !l.part) || (isFirstOfDeck(l) && (D.decks.find((d) => d.id === l.deck).intro || []).some(Boolean));
+};
 const isFirstOfDeck = (l) => LESSONS.filter((x) => x.deck === l.deck)[0] === l;
 /* A section split into 2+ lessons ends with a short section review (5 questions on the whole section). */
 const SR_N = 5;
@@ -85,11 +100,18 @@ function learnHTML() {
     h +=
       '<section class="panel">' +
       head +
-      '<p class="muted">Read these ' +
+      '<p class="muted">' +
+      (sc0(lesson) ? "Read the story first, then these " : "Read these ") +
       lesson.cards.length +
       " terms. Cover each definition and explain it out loud. Then you get one question at a time" +
       (nDone ? ", with a few review questions from earlier lessons mixed in" : "") +
       ".</p>";
+    if (isFirstOfDeck(lesson)) h += storyHTML(dk.intro, "The big picture: " + dk.name, "bigpic");
+    const sc = secObj(lesson);
+    if (sc && sc.intro && sc.intro.some(Boolean)) {
+      if (!lesson.part) h += storyHTML(sc.intro, "Read this first: " + lesson.secName);
+      else h += '<details class="introfold"><summary>Section story: ' + esc(lesson.secName) + "</summary>" + storyHTML(sc.intro, "Read this first: " + lesson.secName) + "</details>";
+    }
     if (isFirstOfDeck(lesson)) D.flows.filter((f) => f.deck === lesson.deck).forEach((f) => (h += chainHTML(f)));
     h +=
       '<dl class="terms">' +
