@@ -14,18 +14,8 @@
       "status": "active",
       "units": [
         {
-          "label": "Unit 0",
-          "title": "Perspectives, research methods, statistics",
-          "status": "ready"
-        },
-        {
-          "label": "Unit 1",
-          "title": "Neurons, the brain, senses, sleep and drugs",
-          "status": "ready"
-        },
-        {
-          "label": "Unit 5",
-          "title": "Health psychology, disorders, treatment",
+          "label": "Full kit",
+          "title": "Units 0, 1 and 5 on one page",
           "status": "ready"
         }
       ]
@@ -57,12 +47,6 @@
           "title": "Health psychology, disorders, treatment",
           "status": "ready",
           "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u5"
-        },
-        {
-          "label": "Perception",
-          "title": "Attention, thresholds, ESP",
-          "status": "ready",
-          "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#per"
         }
       ]
     },
