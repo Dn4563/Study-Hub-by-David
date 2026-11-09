@@ -31,6 +31,42 @@
       ]
     },
     {
+      "id": "psych-david",
+      "name": "AP Psychology (David's format)",
+      "description": "Phineas's Psych kit content in David's study-kit format, used with his permission: Learn with definition and applied questions, flashcards, quizzes and practice exams.",
+      "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/",
+      "owner": "self",
+      "accent": "#2F6B5E",
+      "accentDark": "#7FC2B1",
+      "status": "active",
+      "units": [
+        {
+          "label": "Unit 0",
+          "title": "Perspectives, research methods, statistics",
+          "status": "ready",
+          "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u0"
+        },
+        {
+          "label": "Unit 1",
+          "title": "Neurons, the brain, senses, sleep and drugs",
+          "status": "ready",
+          "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u1"
+        },
+        {
+          "label": "Unit 5",
+          "title": "Health psychology, disorders, treatment",
+          "status": "ready",
+          "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u5"
+        },
+        {
+          "label": "Perception",
+          "title": "Attention, thresholds, ESP",
+          "status": "ready",
+          "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#per"
+        }
+      ]
+    },
+    {
       "id": "apworld",
       "name": "AP World History",
       "description": "Flashcards, lessons, quizzes and a full practice test for each unit, built from AMSCO.",

@@ -21,6 +21,8 @@ const sc0 = (l) => {
   const sc = secObj(l);
   return (sc && sc.intro && sc.intro.some(Boolean) && !l.part) || (isFirstOfDeck(l) && (D.decks.find((d) => d.id === l.deck).intro || []).some(Boolean));
 };
+const AP_SHARE = 0.75, // mixed units: share of a lesson's terms that come back as an applied question in round 2
+  AP_REVIEW = 1 / 3; // mixed units: chance a review question is applied instead of a definition question
 const isFirstOfDeck = (l) => LESSONS.filter((x) => x.deck === l.deck)[0] === l;
 /* A section split into 2+ lessons ends with a short section review (5 questions on the whole section). */
 const SR_N = 5;
@@ -303,7 +305,7 @@ function recallQ(item) {
     card = cards.find((c) => c.id === item.id);
   const label = "From " + u.label + ": " + u.title + ". ";
   let q;
-  if (u.learnMix && card.asks && card.asks.length && Math.random() < 0.5) q = askQ(card, card.asks[Math.floor(Math.random() * card.asks.length)]);
+  if (u.learnMix && card.asks && card.asks.length && Math.random() < AP_REVIEW) q = askQ(card, card.asks[Math.floor(Math.random() * card.asks.length)]);
   else {
     const dir = Math.random() < 0.5 ? "t2d" : "d2t",
       field = dir === "t2d" ? "def" : "term",
@@ -341,10 +343,12 @@ function learnQ(item) {
   if (item.type === "recall") return recallQ(item);
   if (item.type === "sc") return scQ(D.sq[item.idx], "Checkpoint: apply it");
   const card = BYID[item.id];
-  /* Mixed units: about half the questions are applied ones when the card has them. A term that comes back
-     after a miss switches form: missed a definition question, get an applied one, and the other way round. */
+  /* Mixed units: a lesson asks each new term as a definition question first (form "mc"), then most terms come
+     back as their applied question (form "ap"). Review questions lean 2:1 toward definitions. A term that comes
+     back after a miss switches form: missed a definition question, get an applied one, and the other way round. */
   const hasAsk = MIX && card.asks && card.asks.length;
-  const applied = hasAsk && (item.avoid === "ap" ? false : item.avoid ? true : Math.random() < 0.5);
+  const applied =
+    hasAsk && (item.avoid === "ap" ? false : item.avoid ? true : item.form === "ap" ? true : item.form === "mc" ? false : Math.random() < AP_REVIEW);
   if (applied) {
     const q = askQ(card, card.asks[Math.floor(Math.random() * card.asks.length)]);
     if (item.review) q.ask = "Review from an earlier lesson. " + q.ask;
@@ -423,8 +427,14 @@ ACT.lquiz = () => {
     SAVE.revHist = (SAVE.revHist || []).concat([reviews.map((r) => r.id)]).slice(-2);
     save();
   }
-  let q = shuf(lesson.cards).map((c) => ({ type: "card", id: c.id }));
+  let q = shuf(lesson.cards).map((c) => (MIX ? { type: "card", id: c.id, form: "mc" } : { type: "card", id: c.id }));
   reviews.forEach((r) => q.splice(1 + Math.floor(Math.random() * q.length), 0, r));
+  /* Mixed units, round 2: about 3 of every 4 lesson terms that have an applied question come back as one. */
+  if (MIX) {
+    const withAsk = shuf(lesson.cards.filter((c) => c.asks && c.asks.length));
+    const n = Math.round(withAsk.length * AP_SHARE);
+    q = q.concat(shuf(withAsk.slice(0, n)).map((c) => ({ type: "card", id: c.id, form: "ap", r2: true })));
+  }
   if (isLastOfDeck(lesson)) {
     const idx = [];
     D.sq.forEach((s, i) => s.deck === lesson.deck && idx.push(i));
@@ -458,7 +468,7 @@ function learnPick(k) {
   }
   const q = L.cur,
     ok = !!q.options[k].ok,
-    key = L.item.type === "sc" ? "s" + L.item.idx : L.item.id,
+    key = L.item.type === "sc" ? "s" + L.item.idx : L.item.r2 ? L.item.id + "#ap" : L.item.id,
     firstTime = !L.tried.has(key);
   L.tried.add(key);
   if (ok && firstTime) L.first++;

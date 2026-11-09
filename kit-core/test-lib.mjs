@@ -92,6 +92,20 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       P.click(P.q('.tab[data-t="learn"]'), "Learn tab");
     }
     P.click(P.q('[data-act="lquiz"]'), "Quiz me");
+    if (P.w.eval("MIX")) {
+      // Mixed units: definition round first, then about 3 of 4 terms come back as applied questions.
+      const chk = P.w.eval(`(() => {
+        const all = [UI.L.item].concat(UI.L.queue).filter((it) => it.type === "card" && !it.review);
+        const lesson = LESSONS[LI()];
+        const withAsk = lesson.cards.filter((c) => c.asks && c.asks.length).length;
+        const mc = all.filter((it) => it.form === "mc"), ap = all.filter((it) => it.form === "ap");
+        const order = ap.every((a) => all.findIndex((x) => x.id === a.id && x.form === "mc") < all.indexOf(a));
+        return { mc: mc.length, ap: ap.length, n: lesson.cards.length, want: Math.round(withAsk * AP_SHARE), order };
+      })()`);
+      ok(chk.mc === chk.n, "mixed Learn: every lesson term gets a definition question");
+      ok(chk.ap === chk.want, "mixed Learn: about 3 of 4 terms come back as applied questions");
+      ok(chk.order, "mixed Learn: each applied question comes after that term's definition question");
+    }
     let guard = 0,
       missedOnce = false;
     while (P.q('[data-act="lopt"]') && guard++ < 60) {
@@ -307,9 +321,9 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       // Recall is weighted random with a cooldown: no term twice within 10 picks; a trouble term comes up more, not always.
       const rr = P.w.eval(`(() => { const u = earlierUnits()[0], k = keyOf(u, "kit"), s0 = readJSON(k) || {}; const cards = unitCards(u);
         writeJSON(k, Object.assign({}, s0, { trouble: { [cards[0].id]: 5 }, known: {}, recallSeen: {} }));
-        const picks = []; for (let i = 0; i < 60; i++) picks.push(pickRecall().id);
+        const picks = []; for (let i = 0; i < 60; i++) { const p = pickRecall(); picks.push(p.u + ":" + p.id); }
         let repeat = 0; picks.forEach((id, i) => { if (picks.slice(Math.max(0, i - 10), i).indexOf(id) >= 0) repeat++; });
-        writeJSON(k, s0); return { repeat, distinct: new Set(picks).size, hot: picks.filter((id) => id === cards[0].id).length }; })()`);
+        writeJSON(k, s0); return { repeat, distinct: new Set(picks).size, hot: picks.filter((id) => id === u.id + ":" + cards[0].id).length }; })()`);
       ok(rr.repeat === 0, "recall never repeats a term within 10 picks (" + rr.repeat + " repeats)");
       ok(rr.distinct >= 40, "recall spreads across many terms (" + rr.distinct + " different in 60)");
       assertNoErrors(unit + " recall");
