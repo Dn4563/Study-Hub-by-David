@@ -306,3 +306,7 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
 .intro.bigpic { background: transparent; border: 1px solid var(--rule); border-left: 4px solid var(--accent); }
 .introfold { margin: 8px 0 12px; }
 .introfold summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+
+/* Course home: whole-course backup */
+.backup { margin-top: 24px; }
+.bkmsg { margin: 12px 0 0; padding: 10px 14px; border-radius: var(--r-sm); background: var(--sunk); border-left: 4px solid var(--accent); }

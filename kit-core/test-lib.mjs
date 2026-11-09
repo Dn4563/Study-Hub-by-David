@@ -66,6 +66,38 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
   ok(P.qa(".unitrow").length === units.length, "home lists every unit");
   ok(P.q(".hublink") && P.q(".hublink").getAttribute("href") === course.hub, "home links back to the Study Hub");
   ok(P.q(".credit a") && P.q(".credit a").getAttribute("href") === "https://dn4563.github.io/Study-Hub-by-David/" && /David Noskow/.test(P.q(".credit").textContent), "home shows the engine credit");
+  // 1b. Whole-course backup on the home page; Restore also reads another kit's backup when the kit has an import map.
+  ok(P.q('[data-act="bkdown"]') && P.q('[data-act="bkup"]'), "home has Download backup and Restore from backup");
+  const bk = P.w.eval(`(() => {
+    const u = COURSE.units[0], k = keyOf(u, "kit"), before = localStorage.getItem(k);
+    writeJSON(k, { known: { "1.0.0": true }, trouble: { "1.0.1": 2 } });
+    const file = JSON.stringify(backupData());
+    localStorage.removeItem(k);
+    const msg = readBackupFile(file);
+    const back = readJSON(k) || {};
+    const res = { ok: !!(back.known && back.known["1.0.0"] && back.trouble["1.0.1"] === 2), msg };
+    let wrong = ""; try { restoreData({ app: "study-kit", course: "someone-else", data: { x: "1" } }); } catch (e) { wrong = e.message; }
+    res.wrong = wrong;
+    if (before === null) localStorage.removeItem(k); else localStorage.setItem(k, before);
+    return res; })()`);
+  ok(bk.ok && /Restored/.test(bk.msg), "a whole-course backup restores every unit's progress");
+  ok(bk.wrong === "other course", "a backup from another course is refused");
+  if (P.w.eval("!!IMPORT_MAP")) {
+    const im = P.w.eval(`(() => {
+      const ids = Object.keys(IMPORT_MAP.cards), a = ids[0], b = ids[ids.length - 1];
+      const keep = COURSE.units.map((u) => [keyOf(u, "kit"), localStorage.getItem(keyOf(u, "kit"))]);
+      COURSE.units.forEach((u) => localStorage.removeItem(keyOf(u, "kit")));
+      const file = { app: IMPORT_MAP.app, data: { [IMPORT_MAP.known]: JSON.stringify({ [a]: true }), [IMPORT_MAP.miss]: JSON.stringify({ [b]: 3 }) } };
+      const msg = readBackupFile(JSON.stringify(file));
+      const check = (hid, f) => { const [uid, term] = IMPORT_MAP.cards[hid], u = COURSE.units.find((x) => x.id === uid);
+        const id = termIds(u)[term], s = readJSON(keyOf(u, "kit")) || {}; return f(s, id); };
+      const res = { known: check(a, (s, id) => !!(s.known || {})[id]), trouble: check(b, (s, id) => (s.trouble || {})[id] === 3), msg,
+        unmapped: Object.keys(IMPORT_MAP.cards).filter((h) => { const [uid, term] = IMPORT_MAP.cards[h], u = COURSE.units.find((x) => x.id === uid); return !u || !termIds(u)[term]; }).length };
+      keep.forEach(([k, v]) => (v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v)));
+      return res; })()`);
+    ok(im.known && im.trouble && /Brought over 1 known card and 1 missed term/.test(im.msg), "another kit's backup carries over known cards and missed terms: " + im.msg);
+    ok(im.unmapped === 0, "every card in the import map matches a card in this kit (" + im.unmapped + " don't)");
+  }
   assertNoErrors("home");
   P.close();
 

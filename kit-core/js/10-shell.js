@@ -66,7 +66,7 @@ function homeHTML() {
       ICON.chev +
       "</span></a></li>";
   });
-  return h + "</ul></main>" + creditLine();
+  return h + "</ul>" + backupHTML() + "</main>" + creditLine();
 }
 
 function renderHome() {

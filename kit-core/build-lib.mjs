@@ -51,6 +51,9 @@ export function buildKit({ root, coreDir, out = join(root, "index.html") }) {
     unitData[u.id] = data;
     delete u.dir;
   }
+  // Optional map for bringing progress over from another kit's backup file (see js/85-backup.js).
+  const mapFile = join(root, "content/import-map.json");
+  const importMap = existsSync(mapFile) ? JSON.parse(readFileSync(mapFile, "utf8")) : null;
   const css = ["tokens.css", "kit.css"].map((f) => readFileSync(join(coreDir, f), "utf8")).join("\n");
   const jsDir = join(coreDir, "js");
   const js = readdirSync(jsDir)
@@ -62,7 +65,7 @@ export function buildKit({ root, coreDir, out = join(root, "index.html") }) {
   const html =
     `<!doctype html>\n<html lang="en" data-theme="auto"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<title>${course.name} Study Kit</title>${FONTS}<style>\n${css}\n</style></head>\n<body><div id="app"></div>\n` +
-    `<noscript>This study kit needs JavaScript.</noscript>\n<script>\nconst COURSE = ${json(course)};\nconst UNITDATA = ${json(unitData)};\n${js}\n</script>\n</body></html>\n`;
+    `<noscript>This study kit needs JavaScript.</noscript>\n<script>\nconst COURSE = ${json(course)};\nconst UNITDATA = ${json(unitData)};\nconst IMPORT_MAP = ${json(importMap)};\n${js}\n</script>\n</body></html>\n`;
   writeFileSync(out, html);
   return { out, bytes: Buffer.byteLength(html), units: course.units.map((u) => u.id) };
 }
