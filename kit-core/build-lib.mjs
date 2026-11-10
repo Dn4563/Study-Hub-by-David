@@ -37,6 +37,14 @@ function check(data, unitId) {
       }
     }),
   );
+  // Answer letters must be spread out: a set of 8+ multiple-choice questions may not have over 40% on one letter.
+  data.practice.sections.forEach((sec) => {
+    const ans = sec.questions.filter((q) => q.type === "mcq").map((q) => q.ans);
+    if (ans.length < 8) return;
+    const counts = [0, 1, 2, 3, 4].map((k) => ans.filter((a) => a === k).length);
+    const top = Math.max(...counts);
+    if (top / ans.length > 0.4) errs.push(`${sec.name}: ${top} of ${ans.length} answers are ${"ABCDE"[counts.indexOf(top)]} (spread the right answers across the letters)`);
+  });
   if (errs.length) throw new Error(`Unit ${unitId}:\n  ` + errs.join("\n  "));
 }
 
