@@ -191,6 +191,13 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
 
     // 4. Quiz builder with immediate feedback, then results and retry
     P.click(P.q('.tab[data-t="quiz"]'), "Quiz tab");
+    if (P.w.eval("ALL.some((c) => c.asks && c.asks.length)")) {
+      // The applied pool includes asks.json questions, not only scenarios.
+      const ap = P.w.eval(`(() => { initQ(); const keep = Object.assign({}, UI.q); UI.q.mc = 0; UI.q.tf = 0; UI.q.sc = appliedCount();
+        ACT.qstart(); const kinds = UI.run.qs.map((q) => q.kind); const n = kinds.length; UI.run = null; UI.q = keep; render();
+        return { n, ap: kinds.filter((k) => k === "ap").length, sc: kinds.filter((k) => k === "sc").length, want: appliedCount() }; })()`);
+      ok(ap.n === ap.want && ap.ap > 0, "quiz applied pool uses applied questions (" + ap.ap + " applied + " + ap.sc + " scenarios)");
+    }
     P.click(P.q('[data-act="qstart"]'), "Start quiz");
     guard = 0;
     while (P.q('[data-act="rpick"]') && guard++ < 80) {

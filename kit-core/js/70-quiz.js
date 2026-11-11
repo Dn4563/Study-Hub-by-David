@@ -15,6 +15,16 @@ function QSET(t) {
   }
   UI.q[t.dataset.q] = t.type === "number" ? Math.max(0, Number(t.value) || 0) : t.value;
 }
+/* How many applied questions the chosen decks have: scenarios plus applied (asks.json) questions. */
+function appliedPool(decks) {
+  const pool = D.sq.filter((s) => decks.indexOf(s.deck) >= 0).map((s) => () => scQ(s));
+  ALL.filter((c) => decks.indexOf(c.deck) >= 0).forEach((c) => (c.asks || []).forEach((a) => pool.push(() => askQ(c, a))));
+  return pool;
+}
+const quizDecks = () => D.decks.map((d) => d.id).filter((id) => !UI.q || UI.q.decks[id] !== false);
+function appliedCount() {
+  return appliedPool(quizDecks()).length;
+}
 function quizHTML() {
   if (UI.run) return runHTML();
   initQ();
@@ -28,7 +38,7 @@ function quizHTML() {
     '</div></fieldset><fieldset><legend>Questions</legend><div class="grp">' +
     num("mc", "Multiple choice", 40) +
     num("tf", "True or false", 40) +
-    num("sc", "Scenario", D.sq.length) +
+    num("sc", ALL.some((c) => c.asks && c.asks.length) ? "Applied (scenarios and apply-it)" : "Scenario", appliedCount()) +
     '</div></fieldset><fieldset><legend>Options</legend><div class="grp">' +
     "<label>Choices per question " +
     so("nopt", [
@@ -82,9 +92,10 @@ ACT.qstart = () => {
     for (let i = 0; i < nmc; i++) qs.push(mcQ(pool[i % pool.length], null, np));
     for (let i = 0; i < ntf; i++) qs.push(tfQ(pool[(nmc + i) % pool.length]));
   }
-  shuf(D.sq.filter((s) => decks.indexOf(s.deck) >= 0))
+  /* Applied pool: the decks' scenario questions plus every applied (asks.json) question for their cards. */
+  shuf(appliedPool(decks))
     .slice(0, nsc)
-    .forEach((s) => qs.push(scQ(s)));
+    .forEach((make) => qs.push(make()));
   if (!qs.length) {
     UI.qmsg = "Nothing to ask with those settings.";
     return render();
