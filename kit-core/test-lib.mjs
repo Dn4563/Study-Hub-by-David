@@ -191,6 +191,24 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
 
     // 4. Quiz builder with immediate feedback, then results and retry
     P.click(P.q('.tab[data-t="quiz"]'), "Quiz tab");
+    {
+      // Limits, no repeats within a quiz, and a rerun starts with different questions.
+      const qq = P.w.eval(`(() => { initQ(); const keep = Object.assign({}, UI.q), focus = SAVE.settings.focus; SAVE.settings.focus = "random";
+        const caps = quizCaps(); UI.q.mc = 99999; UI.q.tf = 99999; UI.q.sc = 99999; clampQ();
+        const capped = UI.q.mc === caps.terms && UI.q.tf === 0 && UI.q.sc === caps.applied;
+        UI.q.mc = Math.floor(caps.terms / 2); UI.q.tf = 99999; clampQ(); const tfCap = UI.q.tf === caps.terms - UI.q.mc;
+        const keyOf = (q) => (q.kind === "mc" || q.kind === "tf" ? "c" + q.card.id : q.kind + ":" + q.prompt);
+        UI.q.mc = caps.terms - UI.q.tf; ACT.qstart(); const all = UI.run.qs.map(keyOf); UI.run = null;
+        const dup = all.length - new Set(all).size;
+        const n = Math.min(5, Math.floor(caps.terms / 2)); UI.q.mc = n; UI.q.tf = 0; UI.q.sc = 0;
+        ACT.qstart(); const a = UI.run.qs.map(keyOf); UI.run = null; ACT.qstart(); const b = UI.run.qs.map(keyOf); UI.run = null;
+        const overlap = a.filter((k) => b.indexOf(k) >= 0).length;
+        UI.q = keep; SAVE.settings.focus = focus; render();
+        return { capped, tfCap, dup, total: all.length, overlap, n }; })()`);
+      ok(qq.capped && qq.tfCap, "quiz numbers are capped at what the chosen decks have");
+      ok(qq.dup === 0, "a full quiz never repeats a question (" + qq.total + " questions, " + qq.dup + " repeats)");
+      ok(qq.overlap === 0, "a rerun starts with different questions (" + qq.overlap + " of " + qq.n + " repeated)");
+    }
     if (P.w.eval("ALL.some((c) => c.asks && c.asks.length)")) {
       // The applied pool includes asks.json questions, not only scenarios.
       const ap = P.w.eval(`(() => { initQ(); const keep = Object.assign({}, UI.q); UI.q.mc = 0; UI.q.tf = 0; UI.q.sc = appliedCount();
