@@ -15,7 +15,7 @@ These apply to every new unit or chapter in this kit, and to any rework of an ol
 
 ## Old units
 - Current state of every site and unit: see `STATUS.md` in the Study-Hub-by-David repo.
-- Leave units that classmates have already studied alone unless David asks. Chem Chapter 3 and AP World Unit 2 still use the old Learn style (the engine lives here in kit-core; the flag is per unit in each kit). Update them before the midterm, the final, or the AP exam, since those cover everything again. Ask David first.
+- Leave units that classmates have already studied alone unless David asks. Chem Chapter 3 and AP World Unit 2 were brought up to the new Learn style on Nov 12, with David's OK. Review old units again before the midterm, the final, or the AP exam, since those cover everything again. Ask David first.
 
 ## Process
 - Don't invent content. Mark anything not in David's sources VERIFY.
