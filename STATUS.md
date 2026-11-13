@@ -59,6 +59,7 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
   - **Unit 2 (Marketing):** `learnMix` + `recall`. 140 cards in 7 decks (2.1–2.7) with intros, 2 applied questions per card (280), guide (4 Ps, research methods, charts, pricing strategies, channels, promotion tools, Cialdini), cheat sheet with formulas. Practice: Set A (2.1–2.3), Set B (2.7), math drills (CAC, markup, margin, CTR, conversion, ROAS), 40-question mock in the Unit 1 format (Unit 2 test format not known yet). VERIFY: the worksheet's CAC answer ($25, no key), the "prototype vs. MVP" and "multichannel distribution" blanks.
   - Generators: `scripts/asks-src/u1_*.py`, `u2_*.py` (+ `mkasks.py`), `scripts/practice-src/*.py`.
   - GitHub Pages: David turns it on (Settings → Pages → main / root); until then the site and hub link 404.
+- **Hub (Nov 13):** `hub.js` loads `courses.json` with `cache: 'no-cache'`, so a new course or unit shows up on the next visit instead of after the browser's 10-minute cache.
 - **Engine (Nov 13):** a practice source can now show paragraphs and a data table together (`srcHTML` in `js/90-pt.js`); synced to every kit.
 
 ## Engine features (kit-core)

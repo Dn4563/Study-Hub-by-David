@@ -25,7 +25,7 @@ function course(c, i, all) {
     </div></li>`;
 }
 
-fetch('courses.json')
+fetch('courses.json', { cache: 'no-cache' })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(d => {
     const shown = d.courses.filter(c => c.status !== 'hidden');
