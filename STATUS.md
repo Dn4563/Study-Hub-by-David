@@ -77,7 +77,8 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
   - Term → definition is skipped if a definition contains its term, and wrong choices that mention the asked term are left out.
   - A missed term returns 2–3 questions later, asked the other way.
 - **`recall`** (per unit): at most 1 question from an earlier unit, in about 1 of 3 lessons, never in a deck's first lesson. It never counts against the lesson, and it updates the old unit's trouble count. Picks are weighted random (trouble terms not marked "Got it" are 3x as likely) with a cooldown: no term again within 10 recalls or 2 days. Review questions in mixed units skip terms used in the last 2 lessons. There's a Settings switch.
-- **Storage:** progress keys are `sk:<course>:<unit>:kit` and `:pt`. Old keys migrate automatically. The hub's theme is saved in `sk:hub:theme`.
+- **Storage:** progress keys are `sk:<course>:<unit>:kit` and `:pt`. Old keys migrate automatically.
+- **One theme everywhere (Nov 13):** light/dark is one site-wide setting, `sk:theme`. The hub's Dark mode switch and Settings → Theme in any unit both change it, and the hub, every course home page and every unit follow it (open tabs update too). Old choices carry over (`sk:hub:theme`, then the course's saved theme). Text size stays per course. Download backup includes the theme. Phineas's own Psych page is a different site and isn't affected.
 
 ## David's standing rules (also in each repo's CLAUDE.md)
 - **New units:** `learnMix` and `recall` on, plus `asks.json`. One fact per card, and definitions never repeat their term.

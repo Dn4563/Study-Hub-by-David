@@ -106,7 +106,7 @@ function loadSave() {
   const s = o.settings || {};
   /* Older kits kept theme and size per kit; carry them over once. */
   if (!readJSON(PREFK) && (s.theme || s.size !== undefined)) {
-    if (s.theme) PREFS.theme = s.theme;
+    if (s.theme && !savedTheme()) setTheme(s.theme);
     if (typeof s.size === "number") PREFS.size = s.size;
     writeJSON(PREFK, PREFS);
     applyPrefs();

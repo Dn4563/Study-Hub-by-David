@@ -36,6 +36,7 @@ fetch('courses.json', { cache: 'no-cache' })
   });
 
 // Light/dark switch at the bottom. Follows the device until you choose, then remembers your choice.
+// The choice is saved in "sk:theme", which every study kit on this site also reads, so it sets the theme everywhere.
 const sw = document.getElementById('themeswitch');
 const isDark = () => {
   const t = document.documentElement.getAttribute('data-theme');
@@ -46,7 +47,13 @@ syncSwitch();
 sw.addEventListener('click', () => {
   const next = isDark() ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  try { localStorage.setItem('sk:hub:theme', next); } catch (e) {}
+  try { localStorage.setItem('sk:theme', next); } catch (e) {}
   syncSwitch();
+});
+// A kit open in another tab changed the theme (its Settings): follow it.
+addEventListener('storage', e => {
+  if (e.key !== 'sk:theme') return;
+  const t = e.newValue;
+  if (t === 'light' || t === 'dark' || t === 'auto') { document.documentElement.setAttribute('data-theme', t); syncSwitch(); }
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncSwitch);

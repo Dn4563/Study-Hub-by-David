@@ -9,7 +9,7 @@ function backupData() {
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.indexOf(BK_PREFIX) === 0) data[k] = localStorage.getItem(k);
+      if (k && (k.indexOf(BK_PREFIX) === 0 || k === THEMEK)) data[k] = localStorage.getItem(k);
     }
   } catch (e) {}
   return { app: "study-kit", course: COURSE.id, saved: new Date().toISOString(), data: data };
@@ -17,14 +17,14 @@ function backupData() {
 function restoreData(o) {
   if (!o || o.app !== "study-kit" || typeof o.data !== "object") throw new Error("unreadable");
   if (o.course !== COURSE.id) throw new Error("other course");
-  const keys = Object.keys(o.data).filter((k) => k.indexOf(BK_PREFIX) === 0 && typeof o.data[k] === "string");
+  const keys = Object.keys(o.data).filter((k) => (k.indexOf(BK_PREFIX) === 0 || k === THEMEK) && typeof o.data[k] === "string");
   if (!keys.length) throw new Error("empty");
   keys.forEach((k) => {
     try {
       localStorage.setItem(k, o.data[k]);
     } catch (e) {}
   });
-  return "Restored your progress for " + plural(new Set(keys.map((k) => k.split(":")[2])).size - (o.data[BK_PREFIX + "prefs"] ? 1 : 0), "unit") + ".";
+  return "Restored your progress for " + plural(new Set(keys.filter((k) => k !== THEMEK).map((k) => k.split(":")[2])).size - (o.data[BK_PREFIX + "prefs"] ? 1 : 0), "unit") + ".";
 }
 /* Every card in a unit, optional decks included, keyed by term. */
 function termIds(u) {

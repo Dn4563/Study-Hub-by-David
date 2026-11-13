@@ -100,6 +100,17 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
   }
   assertNoErrors("home");
   P.close();
+  // 1c. One theme for the whole site: the hub's switch (sk:theme, or its old key) sets the course home and every unit.
+  P = open("", { "sk:theme": "dark" });
+  ok(P.d.documentElement.getAttribute("data-theme") === "dark", "course home follows the site-wide theme");
+  P.close();
+  P = open(units[0], { "sk:hub:theme": "light" });
+  ok(P.d.documentElement.getAttribute("data-theme") === "light", "unit follows the hub's old theme key");
+  P.click(P.q('.tab[data-t="set"]'), "Settings tab");
+  P.change(P.q('select[data-pref="theme"]'), "dark");
+  ok(P.w.localStorage.getItem("sk:theme") === "dark" && P.d.documentElement.getAttribute("data-theme") === "dark", "Settings theme writes the site-wide theme");
+  assertNoErrors("theme");
+  P.close();
 
   for (const unit of units) {
     // 2. Every tab renders

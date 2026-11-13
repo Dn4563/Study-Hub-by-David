@@ -54,6 +54,7 @@ for (const [w, h] of [[390, 844], [1280, 900]]) for (const scheme of ['light', '
   check(before !== after, `${where}: theme switch did not change the colors`);
   const chosen = await page.getAttribute('html', 'data-theme');
   check(chosen === (scheme === 'dark' ? 'light' : 'dark'), `${where}: switch set theme to ${chosen}`);
+  check(await page.evaluate(() => localStorage.getItem('sk:theme')) === chosen, `${where}: switch did not save the site-wide theme (sk:theme)`);
   await page.reload(); await page.waitForSelector('.course');
   check(await page.getAttribute('html', 'data-theme') === chosen, `${where}: theme choice not remembered after reload`);
   check(await page.getAttribute('#themeswitch', 'aria-checked') === String(chosen === 'dark'), `${where}: switch position wrong after reload`);

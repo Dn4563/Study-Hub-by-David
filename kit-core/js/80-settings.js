@@ -65,7 +65,8 @@ document.addEventListener("change", (e) => {
   const t = e.target;
   if (!UNIT || !t.dataset) return;
   if (t.dataset.pref !== undefined) {
-    PREFS[t.dataset.pref] = t.dataset.pref === "size" ? Number(t.value) : t.value;
+    if (t.dataset.pref === "theme") setTheme(t.value);
+    else PREFS[t.dataset.pref] = t.dataset.pref === "size" ? Number(t.value) : t.value;
     writeJSON(PREFK, PREFS);
     applyPrefs();
     render();

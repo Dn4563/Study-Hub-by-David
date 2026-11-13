@@ -75,6 +75,33 @@ const writeJSON = (k, v) => {
 /* Theme and text size apply to the whole course, including the unit list. */
 const PREF_DEF = { theme: "auto", size: 2 };
 const PREFS = Object.assign({}, PREF_DEF, readJSON(PREFK) || {});
+/* Theme is one setting for the whole site: the hub's Dark mode switch and every kit's Settings share "sk:theme"
+   (all kits live on the same github.io site). Older choices carry over: the hub's old key, then this course's. */
+const THEMEK = "sk:theme";
+function savedTheme() {
+  try {
+    const t = localStorage.getItem(THEMEK) || localStorage.getItem("sk:hub:theme");
+    if (t === "auto" || t === "light" || t === "dark") return t;
+  } catch (e) {}
+  return null;
+}
+function setTheme(t) {
+  PREFS.theme = t;
+  try {
+    localStorage.setItem(THEMEK, t);
+  } catch (e) {}
+}
+PREFS.theme = savedTheme() || PREFS.theme;
+/* Another open tab (the hub or another kit) changed the theme: follow it. */
+addEventListener("storage", (e) => {
+  if (e.key !== THEMEK) return;
+  const t = savedTheme();
+  if (t && t !== PREFS.theme) {
+    PREFS.theme = t;
+    applyPrefs();
+    if (typeof render === "function" && UNIT) render();
+  }
+});
 function applyPrefs() {
   const root = document.documentElement;
   root.setAttribute("data-theme", PREFS.theme);
