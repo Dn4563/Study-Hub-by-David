@@ -80,9 +80,10 @@ function srcHTML(s) {
   let h = '<figure class="src"><figcaption><b>' + esc(s.title) + "</b>" + (s.attr ? '<span class="sattr">' + esc(s.attr) + "</span>" : "") + (s.label ? '<span class="slab">' + esc(s.label) + "</span>" : "") + "</figcaption>";
   const img = srcImg(s.img);
   if (img) h += '<img class="srcimg" alt="' + esc(s.alt || s.title) + '" src="' + img + '">';
-  if (s.table) h += tableHTML({ rows: s.table });
-  else if (s.paras) h += s.paras.map((p, i) => '<p class="stext"><span class="pn">Paragraph ' + (i + 1) + "</span> " + esc(p) + "</p>").join("");
+  /* A source can have text, a table, or both (text first, as in a business case with a data table). */
+  if (s.paras) h += s.paras.map((p, i) => '<p class="stext"><span class="pn">Paragraph ' + (i + 1) + "</span> " + esc(p) + "</p>").join("");
   else if (s.text) h += '<p class="stext">' + esc(s.text) + "</p>";
+  if (s.table) h += tableHTML({ rows: s.table });
   return h + "</figure>";
 }
 function introHTML(sec) {
