@@ -115,6 +115,30 @@
           "url": "https://dn4563.github.io/Jewish-History-Study-Kit/#u1"
         }
       ]
+    },
+    {
+      "id": "apbus",
+      "name": "AP Business",
+      "description": "Flashcards, lessons, quizzes, practice sets and a 40-question mock test for each unit, built from the class slides and study guide.",
+      "url": "https://dn4563.github.io/AP-Business-Study-Kit-by-David/",
+      "owner": "self",
+      "accent": "#6B3A7A",
+      "accentDark": "#C9A0D6",
+      "status": "active",
+      "units": [
+        {
+          "label": "Unit 1",
+          "title": "Business, Competition, and New Ideas",
+          "status": "review",
+          "url": "https://dn4563.github.io/AP-Business-Study-Kit-by-David/#u1"
+        },
+        {
+          "label": "Unit 2",
+          "title": "Marketing",
+          "status": "current",
+          "url": "https://dn4563.github.io/AP-Business-Study-Kit-by-David/#u2"
+        }
+      ]
     }
   ]
 }
