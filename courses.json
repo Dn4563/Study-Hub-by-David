@@ -93,8 +93,14 @@
         {
           "label": "Chapter 4",
           "title": "Elements, Atoms, and Ions",
-          "status": "current",
+          "status": "review",
           "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch04"
+        },
+        {
+          "label": "Chapter 5",
+          "title": "Nomenclature",
+          "status": "current",
+          "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch05"
         }
       ]
     },
