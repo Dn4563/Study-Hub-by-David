@@ -434,6 +434,34 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     assertNoErrors(unit + " settings");
     P.close();
 
+    // 8b. Study plan: rate decks, take the quick check, get labeled decks and timed steps that open the right tool.
+    P = open(unit);
+    P.click(P.q('.tab[data-t="plan"]'), "Study plan tab");
+    ok(P.q('[data-act="plcheck"][disabled]'), "quick check waits until everything is answered");
+    P.click(P.q('[data-act="plset"][data-k="when"][data-v="tomorrow"]'), "test tomorrow");
+    P.click(P.q('[data-act="plset"][data-k="mins"][data-v="30"]'), "30 minutes");
+    const pdecks = P.w.eval("planDecks().map(d => String(d.id))");
+    pdecks.forEach((id, n) => P.click(P.q('[data-act="plset"][data-k="r:' + id + '"][data-v="' + (n === 0 ? "new" : "know") + '"]'), "rate deck"));
+    P.click(P.q('[data-act="plcheck"]:not([disabled])'), "Start the quick check");
+    for (let n = 0; n < pdecks.length; n++) {
+      const right = P.w.eval("UI.P.qs[UI.P.i].q.options.findIndex(o => o.ok)");
+      P.click(P.q('[data-act="plpick"][data-k="' + right + '"]'), "quick-check answer");
+      P.click(P.q('[data-act="plnext"]'), "Next");
+    }
+    ok(P.q(".pltag.learn") && P.w.eval("deckLabel(planDecks()[0]).l") === "learn", "'haven't learned it' stays Learn even with a right answer");
+    const stepMins = P.w.eval("fitSteps(stepsFor('tomorrow', planDecks().map(d => ({d: d, lab: deckLabel(d)}))), 30).now.reduce((n, s) => n + s.min, 0)");
+    ok(P.qa(".plstep").length > 0 && stepMins <= 36, "plan shows steps that fit the time (" + stepMins + " min)");
+    P.click(P.q('[data-act="plgo"][data-n="0"]'), "first step's button");
+    ok(P.w.eval("UI.tab") === "learn", "a Learn step opens Learn");
+    const planStore = P.storage();
+    P.close();
+    {
+      const saved = open(unit, planStore);
+      saved.click(saved.q('.tab[data-t="plan"]'), "Study plan tab again");
+      ok(saved.q(".plstep"), "the plan is still there after a reload");
+      assertNoErrors(unit + " study plan");
+      saved.close();
+    }
     // 9. Progress saved by the old single-unit kit carries over
     const u = course.units.find((x) => x.id === unit);
     if (u.legacyKeys && u.legacyKeys.kit) {

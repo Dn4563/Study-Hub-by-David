@@ -37,6 +37,7 @@ button { cursor: pointer; }
 .tabrow { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
 .tab { flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 13px 12px 10px; color: var(--ink-2); font-weight: 600; }
 .tab:hover { color: var(--ink); }
+@media (min-width: 760px) { .tabrow { flex-wrap: wrap; overflow-x: visible; } }
 .tab[aria-current] { color: var(--ink); border-bottom-color: var(--accent); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 4px; }
 .chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px; padding: 6px 13px; font-size: .92rem; }
@@ -317,3 +318,24 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
 /* Course home: whole-course backup */
 .backup { margin-top: 24px; }
 .bkmsg { margin: 12px 0 0; padding: 10px 14px; border-radius: var(--r-sm); background: var(--sunk); border-left: 4px solid var(--accent); }
+
+/* Study plan */
+.plan h3 { margin-top: 22px; }
+.plrate, .pltable { display: grid; gap: 10px; }
+.plrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.plrow:first-child { border-top: 0; }
+.pld { min-width: 12em; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.plwhy { flex: 1 1 18em; color: var(--ink-2); }
+.pltag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700; border: 1px solid var(--rule); }
+.pltag.learn { border-color: var(--bad); background: var(--bad-wash); }
+.pltag.fix { border-color: var(--mid); background: var(--mid-wash); }
+.pltag.polish { border-color: var(--ok); background: var(--ok-wash); }
+.plsteps { padding-left: 22px; }
+.plstep { margin: 14px 0; }
+.plstep p { margin: 2px 0 8px; color: var(--ink-2); }
+.plstep .chk { margin: 0; }
+.plstep.done b { text-decoration: line-through; color: var(--ink-2); }
+.plsteps.later { opacity: .85; }
+.pldays div { display: flex; gap: 12px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.pldays dt { min-width: 8em; font-weight: 600; }
+.pldays dd { margin: 0; }

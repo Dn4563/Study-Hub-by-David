@@ -103,6 +103,7 @@ function loadSave() {
   SAVE.revHist = o.revHist || [];
   SAVE.secRev = o.secRev || {};
   SAVE.star = o.star || {};
+  SAVE.plan = o.plan || null;
   const s = o.settings || {};
   /* Older kits kept theme and size per kit; carry them over once. */
   if (!readJSON(PREFK) && (s.theme || s.size !== undefined)) {
@@ -171,6 +172,7 @@ function initShell() {
   rebuild();
   const secs = D.practice.sections;
   TABS = [
+    ["plan", "Study plan"],
     ["learn", "Learn"],
     ["guide", "Study guide"],
   ];
@@ -200,6 +202,8 @@ const deckCards = () => (UI.deck ? ALL.filter((c) => c.deck === UI.deck) : ALL);
 
 function view() {
   switch (UI.tab) {
+    case "plan":
+      return planHTML();
     case "learn":
       return learnHTML();
     case "guide":
