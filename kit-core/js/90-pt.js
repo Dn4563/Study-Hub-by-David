@@ -5,6 +5,21 @@ const PT = { sec: 0, secs: [], timerOn: false, elapsed: 0, iv: null, retest: nul
 const TYPE_NAME = { mcq: "Multiple choice", tf: "True or false", label: "Labeling", diagram: "Diagram labeling", frq: "Free response", saq: "Short answer" };
 const newSt = () => ({ elim: [], visited: false, checked: false, sel: null, correct: null, flag: false, items: {}, work: "", abox: "", ans: {}, revealed: false, mark: null, pm: {} });
 const isWritten = (q) => q.type === "frq" || q.type === "saq";
+/* A free-response question whose every part lists accepted answers ("accept") is typed and marked automatically.
+   Names ignore case and spacing; formulas keep case (Co is not CO) but accept plain digits, "(aq)" and any hydrate dot. */
+const isTyped = (q) => q.type === "frq" && q.parts.every((p) => Array.isArray(p.accept) && p.accept.length);
+function normAns(v, formula) {
+  let t = String(v || "")
+    .replace(/[₀-₉]/g, (d) => String("₀₁₂₃₄₅₆₇₈₉".indexOf(d)))
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]/g, "")
+    .replace(/\(aq\)/gi, "")
+    .replace(/[*•∙.]/g, "·")
+    .replace(/\s+/g, "")
+    .replace(/·$/, "");
+  return formula ? t : t.toLowerCase();
+}
+const isFormulaAns = (a) => !/\s/.test(a) && /[A-Z]/.test(a) && !/^[A-Z][a-z]{3,}$/.test(a);
+const typedOk = (v, acc) => acc.some((a) => normAns(v, isFormulaAns(a)) === normAns(a, isFormulaAns(a)));
 const itemsOf = (q) => (q.type === "diagram" ? q.pins.map((p, i) => Object.assign({ t: "Pin " + (i + 1) }, p)) : q.items);
 
 function initPT() {
@@ -188,7 +203,17 @@ function writtenHTML(q, s, nav, topic) {
   if (q.stem) h += '<div class="stem">' + esc(q.stem) + "</div>";
   if (q.lead) h += '<p class="stem">' + esc(q.lead) + "</p>";
   if (q.data && q.data.length) h += '<figure class="src"><figcaption><b>Data</b></figcaption>' + q.data.map((d) => "<p>" + esc(d) + "</p>").join("") + "</figure>";
-  if (q.type === "frq") {
+  if (isTyped(q)) {
+    h += '<p class="hint">Type each answer. For formulas, plain numbers are fine (Fe2O3); a hydrate can use * or a period for the dot.</p><ol class="fparts typed" type="a">';
+    h += q.parts
+      .map((p) => {
+        const v = s.ans[p.k] || "",
+          mk = s.revealed ? (s.pm[p.k] ? " right" : " wrong") : "";
+        return '<li class="tpart' + mk + '"><label><span class="tq">' + esc(p.prompt) + '</span><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" data-ans="' + esc(p.k) + '" value="' + esc(v) + '"' + (s.revealed ? " disabled" : "") + ' aria-label="Answer for ' + esc(p.prompt) + '"></label></li>';
+      })
+      .join("");
+    h += "</ol>";
+  } else if (q.type === "frq") {
     h += '<ol class="fparts" type="a">' + q.parts.map((p) => "<li>" + esc(p.prompt) + "</li>").join("") + "</ol>";
     h += '<label class="part"><span class="pl">Work area <small>Show your steps and reasoning.</small></span><textarea rows="7" data-ans="work">' + esc(s.work) + "</textarea></label>";
     h += '<label class="part"><span class="pl">Answer box <small>Final answers, labeled a, b, c.</small></span><textarea rows="4" data-ans="abox">' + esc(s.abox) + "</textarea></label>";
@@ -210,6 +235,7 @@ function writtenHTML(q, s, nav, topic) {
         "</dd></div><div><dt>Analysis</dt><dd>" +
         esc(p.tea[2]) +
         "</dd></div></dl>";
+    else if (isTyped(q)) h += '<p class="' + (s.pm[p.k] ? "tyes" : "tno") + '"><b>' + (s.pm[p.k] ? "Correct." : "Your answer: " + esc(s.ans[p.k] || "(blank)") + ".") + "</b> " + esc(p.model) + "</p>";
     else h += "<p>" + esc(p.model) + "</p>";
     if (p.earns) h += '<p class="earns"><b>Earns the point if:</b> ' + esc(p.earns) + "</p>";
     if (p.weak) h += '<p class="weak"><b>Weak answer:</b> ' + esc(p.weak) + "</p>";
@@ -391,7 +417,10 @@ function syncMain() {
 }
 function checkCur() {
   const c = cur3();
-  if (isWritten(c.q)) c.s.revealed = true;
+  if (isWritten(c.q)) {
+    if (isTyped(c.q) && !c.s.revealed) c.q.parts.forEach((p) => (c.s.pm[p.k] = typedOk(c.s.ans[p.k], p.accept)));
+    c.s.revealed = true;
+  }
   else if (c.q.type === "label" || c.q.type === "diagram") {
     const it = itemsOf(c.q);
     if (c.s.checked || !it.every((x, i) => c.s.items[i] !== undefined)) return;

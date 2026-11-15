@@ -238,6 +238,13 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
 .credit { font-size: .82rem; color: var(--ink-2); margin-top: 6px; }
 .fparts { padding-left: 22px; }
 .fparts li { margin: 6px 0; }
+.fparts.typed li { margin: 10px 0; }
+.tpart label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.tpart .tq { min-width: 9em; font-weight: 600; }
+.tpart input { flex: 1 1 14em; min-width: 0; padding: 8px 10px; font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-sm); }
+.tpart.right input { border-color: var(--ok); background: var(--ok-wash); }
+.tpart.wrong input { border-color: var(--bad); background: var(--bad-wash); }
+.tyes b { color: var(--ok); } .tno b { color: var(--bad); }
 .part { display: block; margin-top: 16px; }
 .pl { display: block; font-weight: 600; }
 .pl small { font-weight: 400; color: var(--ink-2); margin-left: 6px; }

@@ -302,6 +302,19 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
           for (let k = 0; k < n; k++) P.click(P.q('[data-act="ptitem"][data-i="' + k + '"][data-v="0"]'), "label");
           P.click(P.q('[data-act="ptcheck"]'), "Check Answer");
           ok(P.q(".fb"), "label score shown");
+        } else if (P.w.eval("isTyped(cur3().q)")) {
+          // Typed answers: the first part typed right (plain digits, odd spacing) and the second left wrong are marked automatically.
+          const parts = P.w.eval("cur3().q.parts.map(p => [p.k, p.accept[0]])");
+          const plain = parts[0][1].replace(/[₀-₉]/g, (d) => String("₀₁₂₃₄₅₆₇₈₉".indexOf(d))).replace(/\(aq\)/, "");
+          const inp = P.qa("input[data-ans]");
+          ok(inp.length === parts.length, "one answer box per typed part");
+          inp[0].value = " " + plain + " ";
+          inp[0].dispatchEvent(new P.w.Event("input", { bubbles: true }));
+          if (inp[1]) { inp[1].value = "not it"; inp[1].dispatchEvent(new P.w.Event("input", { bubbles: true })); }
+          P.click(P.q('[data-act="ptcheck"]'), "Check Answer");
+          ok(P.w.eval("cur3().s.pm['" + parts[0][0] + "']") === true, "typed answer marked right automatically");
+          if (inp[1]) ok(P.w.eval("cur3().s.pm['" + parts[1][0] + "']") === false, "wrong typed answer marked wrong");
+          ok(P.q(".tpart.right"), "typed part shows as right");
         } else {
           const ta = P.q("textarea[data-ans]");
           ta.value = "My answer";
