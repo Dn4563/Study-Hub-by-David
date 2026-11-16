@@ -434,31 +434,60 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     assertNoErrors(unit + " settings");
     P.close();
 
-    // 8b. Study plan: rate decks, take the quick check, get labeled decks and timed steps that open the right tool.
+    // 8b. Study plan: setup, quick check on the shared question screen, labels, route, route bar, editing, reload.
     P = open(unit);
     P.click(P.q('.tab[data-t="plan"]'), "Study plan tab");
     ok(P.q('[data-act="plcheck"][disabled]'), "quick check waits until everything is answered");
-    P.click(P.q('[data-act="plset"][data-k="when"][data-v="tomorrow"]'), "test tomorrow");
-    P.click(P.q('[data-act="plset"][data-k="mins"][data-v="30"]'), "30 minutes");
+    const tmr = new Date(Date.now() + 86400000), iso = tmr.getFullYear() + "-" + String(tmr.getMonth() + 1).padStart(2, "0") + "-" + String(tmr.getDate()).padStart(2, "0");
+    P.change(P.q('input[data-plan="date"]'), iso);
+    ok(/tomorrow/.test(P.q(".plan .hint").textContent), "test date shows as tomorrow");
+    P.click(P.q('[data-act="plset"][data-k="mins"][data-v="60"]'), "60 minutes");
     const pdecks = P.w.eval("planDecks().map(d => String(d.id))");
     pdecks.forEach((id, n) => P.click(P.q('[data-act="plset"][data-k="r:' + id + '"][data-v="' + (n === 0 ? "new" : "know") + '"]'), "rate deck"));
     P.click(P.q('[data-act="plcheck"]:not([disabled])'), "Start the quick check");
-    for (let n = 0; n < pdecks.length; n++) {
-      const right = P.w.eval("UI.P.qs[UI.P.i].q.options.findIndex(o => o.ok)");
-      P.click(P.q('[data-act="plpick"][data-k="' + right + '"]'), "quick-check answer");
-      P.click(P.q('[data-act="plnext"]'), "Next");
+    ok(P.q('[data-act="relim"]'), "quick check has cross-off");
+    ok(P.q('[data-act="rskip"]'), "quick check has Skip");
+    const nq = P.w.eval("UI.run.qs.length");
+    for (let n = 0; n < nq; n++) {
+      const right = P.w.eval("UI.run.qs[UI.run.i].options.findIndex(o => o.ok)");
+      P.click(P.q('[data-act="rpick"][data-k="' + right + '"]'), "quick-check answer");
+      if (P.q('[data-act="rconfirm"]')) P.click(P.q('[data-act="rconfirm"]'), "Lock in");
+      ok(P.q(".fb.ok"), "explanation after answering");
+      P.click(P.q('[data-act="rsure"][data-v="' + (n === nq - 1 ? "0" : "1") + '"]'), "sure or guessed");
+      P.click(P.q('[data-act="rnext"]'), "Next");
     }
-    ok(P.q(".pltag.learn") && P.w.eval("deckLabel(planDecks()[0]).l") === "learn", "'haven't learned it' stays Learn even with a right answer");
-    const stepMins = P.w.eval("fitSteps(stepsFor('tomorrow', planDecks().map(d => ({d: d, lab: deckLabel(d)}))), 30).now.reduce((n, s) => n + s.min, 0)");
-    ok(P.qa(".plstep").length > 0 && stepMins <= 36, "plan shows steps that fit the time (" + stepMins + " min)");
-    P.click(P.q('[data-act="plgo"][data-n="0"]'), "first step's button");
-    ok(P.w.eval("UI.tab") === "learn", "a Learn step opens Learn");
+    ok(P.q(".plstep"), "route shows after the quick check");
+    ok(P.w.eval("secLabel(planSecs()[0]).l") === "learn", "'haven't learned it' stays Learn even with a right answer");
+    const lastId = P.w.eval("UI.run ? '' : (planSecs().filter(s => planState().check[s.id]).slice(-1)[0] || {}).id");
+    if (lastId && P.w.eval("secRate(secById('" + lastId + "'))") === "know") ok(P.w.eval("secLabel(secById('" + lastId + "')).l") === "fix", "a right answer you guessed becomes Fix");
+    const firstKey = P.w.eval("activeSteps()[0].key");
+    P.click(P.q('[data-act="plmove"][data-k="' + firstKey + '"][data-v="1"]'), "move step down");
+    ok(P.w.eval("activeSteps()[1].key") === firstKey, "a step can be moved");
+    P.click(P.q('[data-act="plmove"][data-k="' + firstKey + '"][data-v="-1"]'), "move step back up");
+    P.click(P.q('[data-act="plremove"][data-k="' + firstKey + '"]'), "remove step");
+    ok(P.w.eval("activeSteps().every(s => s.key !== '" + firstKey + "')"), "a step can be removed");
+    P.click(P.q('[data-act="plrestore"][data-k="' + firstKey + '"]'), "restore step");
+    ok(P.w.eval("activeSteps()[0].key") === firstKey, "a removed step can be put back");
+    P.click(P.qa(".plan .qnav .btn")[0], "Start my route");
+    ok(P.w.eval("UI.tab") !== "plan" && P.q(".routebar"), "Start my route opens step 1 and shows the route bar");
+    if (firstKey.indexOf("learn:") === 0) {
+      P.w.eval("activeSteps()[0].subs.forEach(s => SAVE.done[s.lesson] = true); render()");
+      ok(P.w.eval("currentStep().key") !== firstKey && P.q(".routebar"), "finishing the lessons moves the route to the next step");
+    }
     const planStore = P.storage();
     P.close();
     {
       const saved = open(unit, planStore);
       saved.click(saved.q('.tab[data-t="plan"]'), "Study plan tab again");
-      ok(saved.q(".plstep"), "the plan is still there after a reload");
+      ok(saved.q(".plstep"), "the route is still there after a reload");
+      const rk = saved.w.eval("activeSteps().find(s => s.kind === 'recheck').key");
+      saved.click(saved.q('[data-act="plgo"][data-k="' + rk + '"]'), "re-check");
+      const rn = saved.w.eval("UI.run.qs.length");
+      for (let n = 0; n < rn; n++) {
+        saved.click(saved.q('[data-act="rskip"]'), "skip");
+        saved.click(saved.q('[data-act="rnext"]'), "Next");
+      }
+      ok(saved.q(".recheck"), "the re-check shows before and after");
       assertNoErrors(unit + " study plan");
       saved.close();
     }

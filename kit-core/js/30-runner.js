@@ -194,20 +194,22 @@ function runHTML() {
   });
   h += "</div>";
   if (!answered && confirmOn) h += lockHTML("rconfirm", R.sel);
+  if (!answered && R.skip) h += '<div class="qnav"><button class="btn ghost" data-act="rskip">Skip: I don\'t know</button></div>';
   if (answered && R.immediate) {
     const ok = R.picked >= 0 && q.options[R.picked].ok;
     h +=
       '<div class="fb ' +
       (ok ? "ok" : "bad") +
       '"><b>' +
-      (R.picked < 0 ? "Time's up." : ok ? "Correct." : "Not quite.") +
+      (R.picked < 0 ? (R.skip ? "Skipped. Here is the answer." : "Time's up.") : ok ? "Correct." : "Not quite.") +
       "</b> " +
       q.explain +
       "</div>" +
-      (q.kind === "tf" ? "" : whyHTML(q.options, R.picked, "")) +
-      '<div class="qnav"><button class="btn" data-act="rnext">' +
-      (R.i + 1 < n ? "Next" : "See results") +
-      "</button></div>";
+      (q.kind === "tf" ? "" : whyHTML(q.options, R.picked, R.picked < 0 ? q.explain : "")) +
+      /* Study plan checks ask whether a right answer was sure or a guess before moving on. */
+      (R.sure && ok && R.res[R.res.length - 1].sure === undefined
+        ? '<div class="qnav sureq"><span>Were you sure?</span><button class="btn sec" data-act="rsure" data-v="1">I was sure</button><button class="btn sec" data-act="rsure" data-v="0">I guessed</button></div>'
+        : '<div class="qnav"><button class="btn" data-act="rnext">' + (R.i + 1 < n ? "Next" : R.doneLabel || "See results") + "</button></div>");
   }
   return h + '</section><p class="kbd">Keys: A to E or 1 to 5 picks a choice. Enter locks it in, then goes to the next question.</p>';
 }
@@ -248,8 +250,8 @@ function rpickAct(k) {
   const q = R.qs[R.i],
     ok = k >= 0 && !!q.options[k].ok;
   R.picked = k;
-  R.res.push({ q: q, ok: ok });
-  if (q.card) {
+  R.res.push({ q: q, ok: ok, skipped: k < 0 });
+  if (q.card && !R.noSave) {
     const id = q.card.id;
     if (!ok) SAVE.trouble[id] = (SAVE.trouble[id] || 0) + 1;
     else if (SAVE.trouble[id]) SAVE.trouble[id] = Math.max(0, SAVE.trouble[id] - 1);
@@ -271,9 +273,18 @@ function rnext() {
   if (R.i >= R.qs.length) {
     R.done = true;
     stopTM();
+    if (R.routeKey && typeof planMarkDone === "function") planMarkDone(R.routeKey);
+    if (R.onDone) return R.onDone(R);
   } else armTM();
   render();
 }
+ACT.rskip = () => UI.run && UI.run.skip && rpickAct(-1);
+ACT.rsure = (t) => {
+  const R = UI.run;
+  if (!R || !R.res.length) return;
+  R.res[R.res.length - 1].sure = t.dataset.v === "1";
+  render();
+};
 ACT.rpick = (t) => {
   const R = UI.run,
     k = Number(t.dataset.k);
@@ -296,7 +307,13 @@ ACT.relim = (t) => {
   if (R.sel === k) R.sel = null;
   render();
 };
-ACT.rnext = () => UI.run && UI.run.picked !== null && rnext();
+ACT.rnext = () => {
+  const R = UI.run;
+  if (!R || R.picked === null) return;
+  const last = R.res[R.res.length - 1];
+  if (R.sure && last && last.ok && last.sure === undefined) return; /* answer "sure or guessed" first */
+  rnext();
+};
 ACT.rquit = ACT.rdone = () => {
   stopTM();
   UI.run = null;

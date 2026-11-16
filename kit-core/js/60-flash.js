@@ -94,6 +94,7 @@ function fcHTML() {
   }
   if (!FC.q.length) {
     if (!FC.total) return h + empty;
+    if (FC.route && typeof planMarkDone === "function") planMarkDone(FC.route);
     const learning = FC.learning.length;
     h +=
       '<section class="panel"><h2>Round done</h2><p class="scorebig">' +

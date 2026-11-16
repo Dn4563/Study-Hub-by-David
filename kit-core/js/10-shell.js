@@ -261,7 +261,8 @@ function render() {
     (UI.tab === "set" ? ' aria-current="page"' : "") +
     ">" +
     ICON.gear +
-    "</button></nav>";
+    "</button></nav>" +
+    (typeof planBarHTML === "function" ? planBarHTML() : "");
   if (["guide", "flash", "quiz"].indexOf(UI.tab) >= 0 && !UI.run)
     h +=
       '<div class="chips" role="group" aria-label="Deck"><button class="chip" data-act="deck" data-d="0" aria-pressed="' +
