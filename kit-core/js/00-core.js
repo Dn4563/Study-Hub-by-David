@@ -30,6 +30,7 @@ const ICON = {
   shuffle: svg('<path d="M3 7h3.5c4 0 6 10 10 10H21"/><path d="M3 17h3.5c1.6 0 2.8-1.6 3.8-3.5"/><path d="M14 9.5c.9-1.4 1.9-2.5 3.5-2.5H21"/><path d="M18 4l3 3-3 3M18 14l3 3-3 3"/>', 16),
   undo: svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/>', 16),
   redo: svg('<path d="M3 12a9 9 0 1015.5-6.2"/><path d="M21 3v6h-6"/>', 16),
+  gear: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/><circle cx="12" cy="12" r="6.2"/>', 20),
 };
 
 /* Which unit is open: the part of the address after #. No match means the course home page. */

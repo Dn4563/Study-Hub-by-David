@@ -87,9 +87,9 @@ function fcHTML() {
       fcCardHTML(BYID[FC.list[i]]) +
       '<div class="qnav fcnav"><button class="btn sec" data-act="fcprev"' +
       (i === 0 ? " disabled" : "") +
-      '>← Previous</button><button class="btn" data-act="fcnext"' +
+      '>Previous</button><button class="btn" data-act="fcnext"' +
       (i === n - 1 ? " disabled" : "") +
-      '>Next →</button></div><p class="muted">Keys: Space flips · ← and → move · S star.</p>';
+      '>Next</button></div><p class="muted">Keys: Space flips the card, the left and right arrows move, S stars it.</p>';
     return h;
   }
   if (!FC.q.length) {
@@ -105,7 +105,7 @@ function fcHTML() {
       "</p>" +
       (learning ? '<ul class="missed">' + FC.learning.map((id) => "<li><b>" + esc(BYID[id].term) + "</b> " + esc(BYID[id].def) + "</li>").join("") + "</ul>" : "") +
       '<div class="qnav">' +
-      (FC.hist.length ? '<button class="btn sec" data-act="fcback">← Back</button>' : "") +
+      (FC.hist.length ? '<button class="btn sec" data-act="fcback">Back</button>' : "") +
       '<button class="btn sec" data-act="fcagain">Restart</button>' +
       (learning ? '<button class="btn" data-act="fclearn">Keep reviewing the ' + learning + "</button>" : "") +
       "</div></section>";
@@ -117,9 +117,9 @@ function fcHTML() {
     done +
     " of " +
     FC.total +
-    " sorted · Know " +
+    " sorted: you know " +
     FC.got.length +
-    " · Still learning " +
+    ", still learning " +
     FC.learning.length +
     '</span><span class="bar" aria-hidden="true"><i style="width:' +
     Math.round((100 * done) / FC.total) +
@@ -127,9 +127,9 @@ function fcHTML() {
     fcCardHTML(BYID[FC.q[0]]) +
     '<div class="qnav fcnav"><button class="btn sec" data-act="fcback"' +
     (FC.hist.length ? "" : " disabled") +
-    '>← Back</button><button class="btn sec" data-act="fcnot">Not yet</button><button class="btn" data-act="fcgot">Got it</button></div><p class="muted">' +
+    '>Back</button><button class="btn sec" data-act="fcnot">Not yet</button><button class="btn" data-act="fcgot">Got it</button></div><p class="muted">' +
     plural(FC.q.length, "card") +
-    " left this round. Keys: Space flips · 1 Not yet · 2 or → Got it · ← Back · S star.</p>";
+    " left this round. Keys: Space flips, 1 is Not yet, 2 or the right arrow is Got it, the left arrow goes back, S stars it.</p>";
   return h;
 }
 /* Every sort records enough to undo it exactly. */

@@ -86,7 +86,7 @@ function importForeign(o) {
     parts.push(u.label + ": " + p.known + " known, " + p.trouble + " to practice");
   });
   if (!parts.length) throw new Error("nothing");
-  return "Brought over " + plural(nk, "known card") + " and " + plural(nt, "missed term") + " from " + M.name + ". " + parts.join(" · ") + ".";
+  return "Brought over " + plural(nk, "known card") + " and " + plural(nt, "missed term") + " from " + M.name + ". " + parts.join(", ") + ".";
 }
 function readBackupFile(text) {
   const o = JSON.parse(text);

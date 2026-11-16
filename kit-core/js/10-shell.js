@@ -253,11 +253,15 @@ function render() {
     '%"></i></span><button class="lnk" data-act="resetprog">Reset progress</button></div></header>';
   h +=
     '<nav class="tabs" aria-label="Sections"><div class="tabrow">' +
-    TABS.map(
-      (t) =>
-        '<button class="tab" data-act="tab" data-t="' + t[0] + '"' + (UI.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>",
-    ).join("") +
-    "</div></nav>";
+    TABS.filter((t) => t[0] !== "set")
+      .map((t) => '<button class="tab" data-act="tab" data-t="' + t[0] + '"' + (UI.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>")
+      .join("") +
+    /* Settings is an icon at the end, outside the scrolling row, so it never wraps or scrolls away. */
+    '</div><button class="tab tabgear" data-act="tab" data-t="set" aria-label="Settings" title="Settings"' +
+    (UI.tab === "set" ? ' aria-current="page"' : "") +
+    ">" +
+    ICON.gear +
+    "</button></nav>";
   if (["guide", "flash", "quiz"].indexOf(UI.tab) >= 0 && !UI.run)
     h +=
       '<div class="chips" role="group" aria-label="Deck"><button class="chip" data-act="deck" data-d="0" aria-pressed="' +
@@ -283,6 +287,10 @@ function render() {
       "</div>";
   h += '<main id="main">' + view() + "</main>" + creditLine();
   document.getElementById("app").innerHTML = h;
+  /* Keep the current tab in view when the tab row scrolls sideways (phones), since rebuilding resets the scroll. */
+  const row = document.querySelector(".tabrow"),
+    cur = row && row.querySelector(".tab[aria-current]");
+  if (cur && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, cur.offsetLeft - row.offsetLeft - (row.clientWidth - cur.offsetWidth) / 2);
   persistUI();
 }
 

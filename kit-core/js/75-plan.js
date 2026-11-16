@@ -252,7 +252,7 @@ function planViewHTML() {
   const when = PL_WHEN.find((w) => w[0] === P.when)[1];
   const fit = fitSteps(stepsFor(P.when, labs), P.mins);
   const total = fit.now.reduce((n, s) => n + s.min, 0);
-  let h = '<section class="panel plan"><div class="rtop"><h2>Your study plan</h2><span class="muted">Test: ' + esc(when) + " · " + (P.mins === 90 ? "90+" : P.mins) + " min now</span></div>";
+  let h = '<section class="panel plan"><div class="rtop"><h2>Your study plan</h2><span class="muted">Test ' + esc(when.toLowerCase()) + ", " + (P.mins === 90 ? "90+" : P.mins) + " minutes now</span></div>";
   h += '<h3>Where you stand</h3><div class="pltable">';
   labs.forEach((x) => {
     const q = P.check[x.d.id];
