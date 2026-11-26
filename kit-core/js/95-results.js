@@ -29,6 +29,20 @@ function resDetail(q, s) {
         .join("") +
       "</ul>"
     );
+  if (q.type === "wfr") {
+    const g = s.ai || s.auto;
+    return (
+      '<ol class="fparts">' +
+      q.parts
+        .map((p) => {
+          const r = g && g.parts[p.k],
+            pts = s.pm[p.k] === true ? p.max : s.pm[p.k] === false ? 0 : r ? r.pts : null;
+          return "<li><p><b>Part " + esc(frqPartLabel(q.grader, p.k)) + (pts === null ? "" : ", " + fmt1(pts) + " of " + p.max) + ".</b> " + esc(p.prompt) + "</p><p><b>Your answer:</b> " + esc(s.ans[p.k] || "(blank)") + '</p><p class="muted"><b>Model answer:</b> ' + esc(p.model) + "</p></li>";
+        })
+        .join("") +
+      "</ol>"
+    );
+  }
   return (
     '<ol class="fparts" type="a">' +
     q.parts
@@ -131,8 +145,8 @@ function resHTML(group) {
   h += "<h3>Question by question</h3>";
   rows.forEach((r) => {
     const st = r.f0 === null ? "none" : r.f0 === 1 ? "ok" : r.f0 > 0 ? "partial" : "bad";
-    const parts = isWritten(r.q) ? r.q.parts.length : r.q.type === "label" || r.q.type === "diagram" ? itemsOf(r.q).length : 1;
-    const lbl = { ok: "Correct", bad: "Missed", none: "Not answered", partial: "Partly right, " + fmt1(r.f0 * parts) + " of " + parts }[st];
+    const parts = r.q.type === "wfr" ? r.q.parts.reduce((n, p) => n + (p.max || 1), 0) : isWritten(r.q) ? r.q.parts.length : r.q.type === "label" || r.q.type === "diagram" ? itemsOf(r.q).length : 1;
+    const lbl = { ok: r.q.type === "wfr" ? "Full marks" : "Correct", bad: "Missed", none: "Not answered", partial: (r.q.type === "wfr" ? "" : "Partly right, ") + fmt1(r.f0 * parts) + " of " + parts + (r.q.type === "wfr" ? " points" : "") }[st];
     const stem = r.q.title || r.q.stem || r.q.lead || "";
     h +=
       '<details class="resq ' +

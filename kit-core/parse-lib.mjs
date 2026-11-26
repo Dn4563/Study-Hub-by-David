@@ -83,7 +83,8 @@ export function parseUnit(dir) {
   const guide = JSON.parse(readIf(dir, "guide.json", "{}"));
   const data = {
     images: JSON.parse(readIf(dir, "images.json", "{}")),
-    decks: parseCards(readFileSync(join(dir, "cards.md"), "utf8")),
+    /* cards.md is optional: a practice-only unit (for example free-response practice) has no cards. */
+    decks: parseCards(readIf(dir, "cards.md", "")),
     sq: JSON.parse(readIf(dir, "scenarios.json", "[]")),
     flows: guide.flows || [],
     trees: parseTrees(readIf(dir, "trees.md", "")),

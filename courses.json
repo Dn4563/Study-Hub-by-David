@@ -5,8 +5,8 @@
     {
       "id": "psych",
       "name": "AP Psychology",
-      "description": "Phineas's study kit for the class, with units 0, 1 and 5 so far.",
-      "url": "https://brother12334.github.io/Psych-Unit-1/Psych%20Unit%201%20Study%20Kit.html",
+      "description": "Phineas's study kit for the class, with units 0, 1 and 5 and AAQ & EBQ practice so far.",
+      "url": "https://ichbleibhier.github.io/Psych-Unit-1/Psych%20Unit%201%20Study%20Kit.html",
       "owner": "external",
       "maker": "Phineas",
       "accent": "#2F6B5E",
@@ -15,7 +15,7 @@
       "units": [
         {
           "label": "Full kit",
-          "title": "Units 0, 1 and 5 on one page",
+          "title": "Units 0, 1, 5 and AAQ & EBQ on one page",
           "status": "ready"
         }
       ]
@@ -23,7 +23,7 @@
     {
       "id": "psych-david",
       "name": "AP Psychology (David's format)",
-      "description": "Phineas's Psych kit content in David's study-kit format, used with his permission: Learn with definition and applied questions, flashcards, quizzes and practice exams.",
+      "description": "Phineas's Psych kit content in David's study-kit format, used with his permission: Learn with definition and applied questions, flashcards, quizzes, practice exams, and AAQ & EBQ free response practice.",
       "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/",
       "owner": "self",
       "accent": "#2F6B5E",
@@ -47,6 +47,12 @@
           "title": "Health psychology, disorders, treatment",
           "status": "ready",
           "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u5"
+        },
+        {
+          "label": "AAQ & EBQ",
+          "title": "Free response practice",
+          "status": "current",
+          "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#frq"
         }
       ]
     },

@@ -20,14 +20,16 @@ function setHTML() {
       [4, "Extra large"],
     ]) +
     "</div>" +
-    chk("hooks", "Show memory hooks") +
+    /* A practice-only unit has no cards, so no hooks, flashcard or quiz settings. */
+    (ALL.length ? chk("hooks", "Show memory hooks") : "") +
     (hasOpt ? chk("optDeck", "Include optional decks in All decks, the progress meter and the mixed quiz") : "") +
     (UNIT.recall && COURSE.units.indexOf(UNIT) > 0 ? chk("recall", "Recall questions from earlier units: now and then a Learn lesson asks one question from an earlier unit. It never counts against the lesson.") : "") +
     "<h3>Answering</h3>" +
     chk("confirm", "Lock in answers: pick a choice, then press Lock in answer, so a misclick does not count. Applies to Learn, Quiz and the Practice Test.") +
-    '<h3>Flashcards</h3><div class="ctl">' +
-    FC_CTL() +
-    '</div><h3>Quiz</h3><div class="ctl">' +
+    (ALL.length
+      ? '<h3>Flashcards</h3><div class="ctl">' +
+        FC_CTL() +
+        '</div><h3>Quiz</h3><div class="ctl">' +
     selHTML("qType", "Question types", [
       ["mixed", "Mixed"],
       ["terms", "Terms only"],
@@ -43,7 +45,10 @@ function setHTML() {
       ["random", "Random"],
       ["trouble", "Trouble terms first"],
     ]) +
-    '</div><h3>Saved progress</h3><p class="muted">Everything saves in this browser automatically. Export to move it to another device, then Import there.</p><div class="qnav"><button class="btn sec" data-act="exp">Export progress</button><button class="btn sec" data-act="imp">Import progress</button><button class="btn danger" data-act="resetall">Reset this unit</button></div><textarea id="xport" rows="4" aria-label="Exported progress" placeholder="Export fills this box. To import, paste exported text here and press Import progress."></textarea></section>'
+        "</div>"
+      : "") +
+    (typeof gemCardHTML === "function" ? gemCardHTML() : "") +
+    '<h3>Saved progress</h3><p class="muted">Everything saves in this browser automatically. Export to move it to another device, then Import there.</p><div class="qnav"><button class="btn sec" data-act="exp">Export progress</button><button class="btn sec" data-act="imp">Import progress</button><button class="btn danger" data-act="resetall">Reset this unit</button></div><textarea id="xport" rows="4" aria-label="Exported progress" placeholder="Export fills this box. To import, paste exported text here and press Import progress."></textarea></section>'
   );
 }
 function SET(t) {

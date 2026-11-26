@@ -44,7 +44,7 @@ function homeHTML() {
   h += '<main><ul class="unitlist">';
   COURSE.units.forEach((u) => {
     const p = unitProgress(u),
-      pct = p.tot ? Math.round((100 * p.got) / p.tot) : 0;
+      pct = p.tot ? Math.round((100 * p.got) / p.tot) : p.total ? Math.round((100 * p.answered) / p.total) : 0;
     h +=
       '<li><a class="unitrow" href="#' +
       esc(u.id) +
@@ -55,11 +55,9 @@ function homeHTML() {
       "</span>" +
       (u.blurb ? '<span class="ublurb">' + esc(u.blurb) + "</span>" : "") +
       '<span class="ustat">' +
-      p.got +
-      " of " +
-      p.tot +
-      " terms marked got it" +
-      (p.total ? ", " + p.answered + " of " + p.total + " practice questions answered" : "") +
+      /* A practice-only unit (no cards) shows only its practice count. */
+      (p.tot ? p.got + " of " + p.tot + " terms marked got it" + (p.total ? ", " : "") : "") +
+      (p.total ? p.answered + " of " + p.total + " practice questions answered" : "") +
       '</span><span class="bar" aria-hidden="true"><i style="width:' +
       pct +
       '%"></i></span></span><span class="ugo">Open' +
@@ -171,18 +169,21 @@ function initShell() {
   indexCards();
   rebuild();
   const secs = D.practice.sections;
-  TABS = [
-    ["plan", "Study plan"],
-    ["learn", "Learn"],
-    ["guide", "Study guide"],
-  ];
+  /* A unit with no cards is practice only: no Study plan, Learn, Study guide, Flashcards or Quiz. */
+  TABS = ALL.length
+    ? [
+        ["plan", "Study plan"],
+        ["learn", "Learn"],
+        ["guide", "Study guide"],
+      ]
+    : [];
   if (D.cheat && D.cheat.length) TABS.push(["cheat", "Cheat sheet"]);
-  TABS.push(["flash", "Flashcards"], ["quiz", "Quiz"]);
+  if (ALL.length) TABS.push(["flash", "Flashcards"], ["quiz", "Quiz"]);
   if (secs.some((s) => s.mode !== "exam")) TABS.push(["pt", "Practice Test"]);
   if (secs.some((s) => s.mode === "exam")) TABS.push(["exam", COURSE.examTab || "Full exam"]);
   if (secs.length) TABS.push(["prog", "Progress"]);
   TABS.push(["set", "Settings"]);
-  UI = { tab: "learn", deck: 0, run: null, q: null, qmsg: "" };
+  UI = { tab: TABS[0][0], deck: 0, run: null, q: null, qmsg: "" };
   const u = SAVE.ui;
   if (u) {
     if (TABS.some((t) => t[0] === u.tab)) UI.tab = u.tab;
@@ -244,13 +245,16 @@ function render() {
     "</p><h1>" +
     esc(UNIT.title) +
     "</h1>" +
-    '<div class="meter"><span>' +
-    got +
-    " of " +
-    tot +
-    ' terms marked got it</span><span class="bar" aria-hidden="true"><i style="width:' +
-    pct +
-    '%"></i></span><button class="lnk" data-act="resetprog">Reset progress</button></div></header>';
+    (tot
+      ? '<div class="meter"><span>' +
+        got +
+        " of " +
+        tot +
+        ' terms marked got it</span><span class="bar" aria-hidden="true"><i style="width:' +
+        pct +
+        '%"></i></span><button class="lnk" data-act="resetprog">Reset progress</button></div>'
+      : "") +
+    "</header>";
   h +=
     '<nav class="tabs" aria-label="Sections"><div class="tabrow">' +
     TABS.filter((t) => t[0] !== "set")

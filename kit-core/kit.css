@@ -380,3 +380,50 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
   .plopen { min-width: 0; text-align: left; }
   .routebar .rbt { flex: 1 1 100%; }
 }
+
+/* AAQ / EBQ free response */
+.src .sblock { margin: 14px 0 2px; font-size: .95rem; }
+.wscore { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 18px 0 6px; padding: 14px 16px; border-radius: var(--r-sm); background: var(--sunk); }
+.wsl { font-weight: 600; color: var(--ink-2); }
+.wsn { font-family: var(--serif); font-size: 1.7rem; font-weight: 600; }
+.wscore p { flex-basis: 100%; margin: 0; }
+.wnote { margin: 12px 0; padding: 10px 14px; border-radius: var(--r-sm); background: var(--sunk); }
+.wnote.bad { background: var(--bad-wash); }
+.wpart { padding: 20px 0 6px; border-top: 1px solid var(--rule); }
+.wpart:first-of-type { margin-top: 10px; }
+.wph { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; }
+.wpts { font-weight: 700; white-space: nowrap; color: var(--ink-2); }
+.wpts.ok { color: var(--ok); }
+.wpts.no { color: var(--bad); }
+.wpq { margin: 6px 0 10px; }
+.wpart textarea { min-height: 7.5em; field-sizing: content; max-height: 24em; width: 100%; box-sizing: border-box; font: inherit; line-height: 1.5; padding: 10px 12px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-sm); }
+.wchecks { list-style: none; padding: 0; margin: 12px 0 6px; display: grid; gap: 4px; }
+.wchecks li { display: flex; gap: 8px; }
+.wchecks li span { font-weight: 700; flex: none; }
+.wchecks li.ok span { color: var(--ok); }
+.wchecks li.no span { color: var(--bad); }
+.wtip { margin: 6px 0; color: var(--ink-2); }
+.wtip b { color: var(--ink); }
+.wpart details { margin: 8px 0; }
+.wpart details summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+.wpart details p { margin: 6px 0 0; }
+.wpart .selfmark { margin: 8px 0 10px; }
+.intro .grows { margin: 6px 0 10px; }
+.grows div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.grows dt { font-weight: 700; }
+.grows dd { margin: 0; }
+.tscroll { overflow-x: auto; margin: 8px 0 12px; }
+.gt { border-collapse: collapse; width: 100%; font-size: .94rem; }
+.gt th, .gt td { text-align: left; vertical-align: top; padding: 6px 10px; border: 1px solid var(--rule); }
+.gt th { background: var(--sunk); }
+.gemcard { max-width: 70ch; }
+.gemcard a { color: var(--accent); }
+.gemsteps, .gemnotes { padding-left: 22px; }
+.gemsteps li, .gemnotes li { margin: 4px 0; }
+.gemrow { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 12px 0 4px; }
+.gemrow label { display: grid; gap: 4px; font-weight: 600; flex: 1 1 14rem; }
+.gemrow input { font: inherit; font-weight: 400; padding: 8px 10px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-sm); }
+.gemmsg { font-weight: 600; }
+.gemgen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0; padding: 10px 14px; border-radius: var(--r-sm); background: var(--sunk); }
+.gemgen label { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 640px) { .grows div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }

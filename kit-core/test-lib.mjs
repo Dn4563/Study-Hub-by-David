@@ -124,6 +124,65 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     }
     assertNoErrors(unit + " tabs");
 
+    // 2b. Practice-only unit (no cards), e.g. AAQ & EBQ free response: no Learn or Quiz; check the AAQ / EBQ checker,
+    // overrides, the random button, Gemini settings and (with a fake reply) Gemini grading.
+    if (!P.q('.tab[data-t="learn"]')) {
+      ok(!P.q('.tab[data-t="quiz"]') && !P.q('.tab[data-t="plan"]') && P.q('.tab[data-t="pt"]'), "practice-only unit shows only practice tabs");
+      if (P.w.eval("D.practice.frq ? 1 : 0")) {
+        const setAns = (k, v) => {
+          const ta = P.q('textarea[data-ans="' + k + '"]');
+          ta.value = v;
+          ta.dispatchEvent(new P.w.Event("input", { bubbles: true }));
+        };
+        P.click(P.q('.tab[data-t="pt"]'), "Practice Test tab");
+        const secs = P.w.eval("PT.secs.map(s => s.grader || '')");
+        const ai = secs.indexOf("aaq"), ei = secs.indexOf("ebq");
+        if (ai >= 0) {
+          P.click(P.qa('[data-act="ptsec"]')[ai], "AAQ practice");
+          ok(P.q(".src .sblock") && P.q(".src table"), "AAQ shows the article's sections and table");
+          const answer = P.w.eval("cur3().q.r.A.answer");
+          const wrongM = P.w.eval("Object.keys(frqCfg().methods).find(m => m !== cur3().q.r.A.answer)");
+          setAns("A", "This study is a " + answer + " because participants were randomly assigned.");
+          P.click(P.q('[data-act="ptcheck"]'), "Check my answers");
+          ok(P.w.eval("cur3().s.auto.parts.A.pts") === 1, "AAQ part A: the right method earns the point");
+          ok(P.q(".wchecks li.ok") && P.q(".wscore"), "checked AAQ shows the checklist and score");
+          setAns("A", "This study is a " + wrongM + ".");
+          P.click(P.q('[data-act="ptcheck"]'), "Recheck");
+          ok(P.w.eval("cur3().s.auto.parts.A.pts") === 0 && /You named/.test(P.q(".wchecks").textContent), "a wrong method gets Phineas's 'You named…' feedback");
+          const before = P.w.eval("frac(cur3().q, cur3().s)");
+          P.click(P.q('[data-act="ptpart"][data-p="A"][data-v="1"]'), "override part A");
+          ok(P.w.eval("frac(cur3().q, cur3().s)") > before, "I got it overrides the checker");
+          const curBefore = P.w.eval("curView().h.cur");
+          P.click(P.q('[data-act="ptrandom"]'), "random one I haven't done");
+          ok(P.w.eval("curView().h.cur") !== curBefore && P.w.eval("frac(cur3().q, cur3().s)") === null, "the random button opens an unchecked article");
+        }
+        if (ei >= 0) {
+          P.click(P.qa('[data-act="ptsec"]')[ei], "EBQ practice");
+          P.w.eval("cur3().q.parts.map(p => p.k)").forEach((k) => setAns(k, P.w.eval("cur3().q.parts.find(p => p.k === '" + k + "').model")));
+          P.click(P.q('[data-act="ptcheck"]'), "Check EBQ");
+          ok(P.w.eval("cur3().s.auto.total") >= 5, "the EBQ model answer scores well with the checker (" + P.w.eval("cur3().s.auto.total") + " of 7)");
+        }
+        P.click(P.q('.tab[data-t="set"]'), "Settings tab");
+        ok(P.q("#gemkey") && P.q(".gemsteps"), "Settings has the Gemini box with setup steps");
+        assertNoErrors(unit + " free response");
+        P.close();
+        // Gemini grading with a fake reply (no real key or network).
+        P = open(unit, { "sk:gemini": JSON.stringify({ key: "AIzaFAKE", model: "gemini-2.5-flash" }) });
+        P.w.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ parts: { A: { points: 1, earned: ["Names the method"], missing: [], tip: "Add a clue." } }, overall: "Good start." }) }] } }] }) });
+        P.click(P.q('.tab[data-t="pt"]'), "Practice Test tab");
+        if (ai >= 0) {
+          P.click(P.qa('[data-act="ptsec"]')[ai], "AAQ practice");
+          ok(P.q('[data-act="gemgrade"]') && P.q(".gemgen"), "with a key, Grade with Gemini and Generate appear");
+          await P.w.ACT_gemgradeForTest();
+          ok(P.w.eval("cur3().s.ai && cur3().s.ai.parts.A.pts") === 1 && /graded by Gemini/.test(P.q(".wscore").textContent), "Gemini's grade is shown");
+        }
+        assertNoErrors(unit + " gemini");
+        P.close();
+      }
+      log(`  ${unit}: OK`);
+      continue;
+    }
+
     // 3. One full lesson, answering wrong once so the retry path runs
     P.click(P.q('.tab[data-t="learn"]'), "Learn tab");
     const hasIntros = P.w.eval("D.decks.some((dk) => (dk.intro || []).some(Boolean) || dk.sections.some((s) => (s.intro || []).some(Boolean)))");

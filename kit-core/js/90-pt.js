@@ -2,9 +2,9 @@
    palette (gray = not visited, outlined = visited, green = correct, red = incorrect, amber = partly right,
    ring = current, corner mark = flagged). Question types: mcq, tf, label, diagram, frq, saq. */
 const PT = { sec: 0, secs: [], timerOn: false, elapsed: 0, iv: null, retest: null, msg: "", intro: {}, res: null };
-const TYPE_NAME = { mcq: "Multiple choice", tf: "True or false", label: "Labeling", diagram: "Diagram labeling", frq: "Free response", saq: "Short answer" };
+const TYPE_NAME = { mcq: "Multiple choice", tf: "True or false", label: "Labeling", diagram: "Diagram labeling", frq: "Free response", saq: "Short answer", wfr: "Free response" };
 const newSt = () => ({ elim: [], visited: false, checked: false, sel: null, correct: null, flag: false, items: {}, work: "", abox: "", ans: {}, revealed: false, mark: null, pm: {} });
-const isWritten = (q) => q.type === "frq" || q.type === "saq";
+const isWritten = (q) => q.type === "frq" || q.type === "saq" || q.type === "wfr";
 /* A free-response question whose every part lists accepted answers ("accept") is typed and marked automatically.
    Names ignore case and spacing; formulas keep case (Co is not CO) but accept plain digits, "(aq)" and any hydrate dot. */
 const isTyped = (q) => q.type === "frq" && q.parts.every((p) => Array.isArray(p.accept) && p.accept.length);
@@ -24,7 +24,9 @@ const itemsOf = (q) => (q.type === "diagram" ? q.pins.map((p, i) => Object.assig
 
 function initPT() {
   D.practice.sections.forEach((s) => {
-    const sec = { name: s.name, mode: s.mode || "practice", exam: s.exam || s.name, tips: s.tips || [], examTips: s.examTips || [], sources: s.sources || {}, qs: s.questions, byId: {}, cur: 0, st: {}, oo: {} };
+    const sec = { name: s.name, mode: s.mode || "practice", exam: s.exam || s.name, tips: s.tips || [], examTips: s.examTips || [], guide: s.guide || null, grader: s.grader || null, sources: Object.assign({}, s.sources || {}), qs: s.questions.slice(), byId: {}, cur: 0, st: {}, oo: {} };
+    /* Practice sets for AAQ / EBQ also hold articles and prompts this browser generated with Gemini. */
+    if (sec.grader && sec.mode === "practice" && typeof gemGenerated === "function") gemGenerated(sec.grader).forEach((g) => (sec.sources[g.src.id] = g.src, sec.qs.unshift(g.q)));
     sec.qs.forEach((q) => {
       if (q.type === "tf") {
         q.options = ["True", "False"];
@@ -43,6 +45,14 @@ function initPT() {
 
 /* Points earned on one question, 0 to 1, or null if not answered yet. Multi-part items earn partial credit. */
 function frac(q, s) {
+  /* AAQ / EBQ: points from the checker (or Gemini), with any part the student overrode counted as full or zero. */
+  if (q.type === "wfr") {
+    if (!s.revealed) return null;
+    const g = s.ai || s.auto,
+      max = q.parts.reduce((n, p) => n + (p.max || 1), 0);
+    const got = q.parts.reduce((n, p) => n + (s.pm[p.k] === true ? p.max || 1 : s.pm[p.k] === false ? 0 : (g && g.parts[p.k] && g.parts[p.k].pts) || 0), 0);
+    return max ? got / max : 0;
+  }
   if (isWritten(q)) {
     const ks = q.parts.map((p) => p.k),
       pm = s.pm || {};
@@ -74,11 +84,14 @@ function cur3() {
 function secScore(sec, ids, st) {
   let pts = 0,
     n = 0;
+  /* AAQ / EBQ questions count their real points (7 each); everything else counts 1 per question. */
   ids.forEach((id) => {
-    const f = frac(sec.byId[id], st[id]);
+    const q = sec.byId[id],
+      f = frac(q, st[id]),
+      w = q.type === "wfr" ? q.parts.reduce((m, p) => m + (p.max || 1), 0) : 1;
     if (f !== null) {
-      n++;
-      pts += f;
+      n += w;
+      pts += f * w;
     }
   });
   return fmt1(pts) + " of " + plural(n, "point") + " so far";
@@ -98,10 +111,39 @@ function srcHTML(s) {
   /* A source can have text, a table, or both (text first, as in a business case with a data table). */
   if (s.paras) h += s.paras.map((p, i) => '<p class="stext"><span class="pn">Paragraph ' + (i + 1) + "</span> " + esc(p) + "</p>").join("");
   else if (s.text) h += '<p class="stext">' + esc(s.text) + "</p>";
-  if (s.table) h += tableHTML({ rows: s.table });
+  /* Headed blocks (an article's sections, or an EBQ's sources); the table can follow a named block. */
+  if (s.blocks)
+    s.blocks.forEach((b) => {
+      h += '<h4 class="sblock">' + esc(b.h) + '</h4><p class="stext">' + esc(b.p) + "</p>";
+      if (s.table && s.tableAfter === b.h) h += tableHTML({ rows: s.table });
+    });
+  if (s.table && !(s.blocks && s.blocks.some((b) => b.h === s.tableAfter))) h += tableHTML({ rows: s.table });
   return h + "</figure>";
 }
+/* Guide text from the content (bold and line breaks allowed; everything else escaped). */
+const richText = (t) => esc(t).replace(/&lt;(\/?b|br)&gt;/g, "<$1>");
+function guideHTML2(blocks) {
+  return blocks
+    .map((b) =>
+      b.h
+        ? "<h4>" + richText(b.h) + "</h4>"
+        : b.p
+          ? "<p>" + richText(b.p) + "</p>"
+          : b.rows
+            ? '<dl class="grows">' + b.rows.map((r) => "<div><dt>" + richText(r[0]) + "</dt><dd>" + richText(r[1]) + "</dd></div>").join("") + "</dl>"
+            : b.table
+              ? '<div class="tscroll"><table class="gt"><thead><tr>' + b.table[0].map((c) => "<th>" + richText(c) + "</th>").join("") + "</tr></thead><tbody>" + b.table.slice(1).map((r) => "<tr>" + r.map((c) => "<td>" + richText(c) + "</td>").join("") + "</tr>").join("") + "</tbody></table></div>"
+              : "",
+    )
+    .join("");
+}
 function introHTML(sec) {
+  if (sec.guide) {
+    const open = !!PT.intro[sec.name];
+    let g = '<div class="intro"><button class="lnk disclose" data-act="ptintro" aria-expanded="' + open + '">' + ICON.chev + (sec.grader === "ebq" ? "How the EBQ works" : "How the AAQ works") + "</button>";
+    if (open) g += (sec.examTips.length ? ul(sec.examTips) : "") + guideHTML2(sec.guide);
+    return g + "</div>";
+  }
   if (!sec.tips.length && !sec.examTips.length) return "";
   const open = !!PT.intro[sec.name];
   let h =
@@ -198,7 +240,111 @@ function diagramHTML(q, s) {
     "</figure>"
   );
 }
-function writtenHTML(q, s, nav, topic) {
+/* AAQ / EBQ question: an answer box per part; Check grades each part with the key-word checker (or Gemini),
+   showing points, what the rubric found and missed, tips, the common mistake, and the model answer. */
+function wfrHTML(q, s, nav, topic, sec) {
+  const g = s.ai || s.auto,
+    max = q.parts.reduce((n, p) => n + (p.max || 1), 0),
+    gemOn = typeof gemKey === "function" && !!gemKey();
+  let h = "";
+  if (s.revealed && g) {
+    const f = frac(q, s),
+      tot = Math.round(f * max * 10) / 10;
+    h +=
+      '<div class="wscore"><span class="wsl">Your score, ' +
+      (s.ai ? "graded by Gemini" : "checklist grader") +
+      '</span><span class="wsn">' +
+      fmt1(tot) +
+      " of " +
+      max +
+      '</span><p class="muted">' +
+      (tot === max ? "Full marks. Try another one or a timed run." : tot >= max - 2 ? "Solid. Fix the parts marked below and recheck." : "Read the feedback under each part, compare with the model answer, then edit and recheck.") +
+      "</p>" +
+      (s.ai && s.ai.overall ? "<p>" + esc(s.ai.overall) + "</p>" : "") +
+      "</div>";
+  }
+  if (s.aiLoading) h += '<p class="wnote">Grading with Gemini. This usually takes 5 to 20 seconds.</p>';
+  if (s.aiErr) h += '<p class="wnote bad">Gemini couldn\'t grade this: ' + esc(s.aiErr) + (q.r || q.grader === "ebq" ? " Showing the checklist grader instead." : "") + "</p>";
+  if (s.revealed && !g) h += '<p class="wnote">This article was generated with Gemini, so it has no checklist. Use Grade with Gemini, or compare with the model answers.</p>';
+  q.parts.forEach((p) => {
+    const meta = frqPart(q.grader, p.k),
+      r = g && s.revealed ? g.parts[p.k] : null,
+      over = s.pm[p.k];
+    const pts = r ? (over === true ? p.max : over === false ? 0 : r.pts) : null;
+    h +=
+      '<div class="wpart"><div class="wph"><span><b>Part ' +
+      esc(meta.label || p.k) +
+      "</b>" +
+      (meta.name ? ", " + esc(meta.name) : "") +
+      (meta.verb ? ' <span class="muted">(' + esc(meta.verb) + ")</span>" : "") +
+      '</span><span class="wpts' +
+      (pts === null ? "" : pts === p.max ? " ok" : " no") +
+      '">' +
+      (pts === null ? plural(p.max, "point") : fmt1(pts) + " of " + p.max) +
+      "</span></div>" +
+      '<p class="wpq">' +
+      esc(p.prompt) +
+      '</p><textarea rows="' +
+      (meta.rows || (p.max > 1 || "EF".indexOf(p.k) >= 0 ? 5 : 3)) +
+      '" data-ans="' +
+      esc(p.k) +
+      '" aria-label="Answer for part ' +
+      esc(meta.label || p.k) +
+      '" placeholder="' +
+      esc(meta.verb === "Identify" ? "One clear sentence" : q.grader === "ebq" ? (p.k === "A" ? "Your claim" : /ii$/.test(p.k) ? "This supports my claim because… This can be explained by…" : "Evidence… (Source #)") : "Write your answer") +
+      '">' +
+      esc(s.ans[p.k] || "") +
+      "</textarea>";
+    if (s.revealed) {
+      if (r)
+        h +=
+          '<ul class="wchecks">' +
+          r.checks.map((c) => '<li class="' + (c.ok ? "ok" : "no") + '"><span aria-hidden="true">' + (c.ok ? "✓" : "✗") + "</span> " + esc(c.text) + "</li>").join("") +
+          "</ul>" +
+          r.tips.map((t) => '<p class="wtip"><b>Tip:</b> ' + esc(t) + "</p>").join("");
+      if (r && r.pts < r.max && meta.mistake) h += '<p class="wtip"><b>Common mistake:</b> ' + esc(meta.mistake) + "</p>";
+      if (meta.tip) h += '<p class="wtip"><b>Pro tip:</b> ' + esc(meta.tip) + "</p>";
+      h += "<details" + (!r || r.pts < r.max ? " open" : "") + '><summary>Model answer</summary><p>' + esc(p.model) + "</p></details>";
+      h +=
+        '<div class="selfmark" role="group" aria-label="Override part ' +
+        esc(meta.label || p.k) +
+        '"><span>Override</span><button class="mk' +
+        (over === true ? " on right" : "") +
+        '" data-act="ptpart" data-p="' +
+        esc(p.k) +
+        '" data-v="1" aria-pressed="' +
+        (over === true) +
+        '">I got it</button><button class="mk' +
+        (over === false ? " on wrong" : "") +
+        '" data-act="ptpart" data-p="' +
+        esc(p.k) +
+        '" data-v="0" aria-pressed="' +
+        (over === false) +
+        '">I missed it</button></div>';
+    }
+    h += "</div>";
+  });
+  if (s.revealed && q.grader === "ebq") {
+    const ideas = ebqIdeas(q, sec.sources[q.src]);
+    if (ideas.length) h += '<p class="wtip"><b>Concepts that fit this prompt:</b> ' + esc(ideas.join(", ")) + ". Other concepts from class can work too.</p>";
+  }
+  h +=
+    '<div class="qnav"><button class="btn" data-act="ptcheck">' +
+    (s.revealed ? "Recheck my answers" : "Check my answers") +
+    "</button>" +
+    (gemOn ? '<button class="btn sec" data-act="gemgrade"' + (s.aiLoading ? " disabled" : "") + ">Grade with Gemini</button>" : "") +
+    '<button class="btn ghost" data-act="ptclear">Clear answers</button>' +
+    nav +
+    "</div>" +
+    '<p class="hint">' +
+    (gemOn
+      ? "Gemini grades against the " + (q.grader === "ebq" ? "EBQ" : "AAQ") + " rubric. AI can make mistakes, so compare with the model answer too."
+      : "The checklist grader looks for the pieces the rubric requires; it can't judge your reasoning like a real reader. For AI grading, add a free Gemini key in Settings.") +
+    "</p>";
+  return h;
+}
+function writtenHTML(q, s, nav, topic, sec) {
+  if (q.type === "wfr") return wfrHTML(q, s, nav, topic, sec);
   let h = q.title ? '<h3 class="qhead">' + esc(q.title) + "</h3>" : "";
   if (q.stem) h += '<div class="stem">' + esc(q.stem) + "</div>";
   if (q.lead) h += '<p class="stem">' + esc(q.lead) + "</p>";
@@ -285,7 +431,7 @@ function ptSectionHTML() {
       " of " +
       ids.length +
       ' now correct. Right answers here update the main section. <button class="lnk" data-act="ptendretest">Back to the full section</button></div>';
-  h += introHTML(sec);
+  h += introHTML(sec) + (typeof gemGenHTML === "function" ? gemGenHTML(sec) : "");
   h +=
     '<div class="pals" role="group" aria-label="Questions">' +
     ids
@@ -336,7 +482,7 @@ function ptSectionHTML() {
         n = it.filter((x, i) => s.items[i] === x.ans).length;
       h += '<div class="fb' + (s.correct ? " ok" : n ? "" : " bad") + '"><b>' + n + " of " + it.length + " correct.</b> You earn " + fmt1(n / it.length) + " of 1 point." + topic + "</div>";
     }
-  } else h += writtenHTML(q, s, nav, topic);
+  } else h += writtenHTML(q, s, nav, topic, sec);
   return h + "</section>";
 }
 
@@ -355,6 +501,7 @@ function ptControls(M) {
     (sec.shuffled ? "Shuffled" : "Shuffle questions") +
     "</button>" +
     (sec.shuffled ? '<button class="btn ghost" data-act="ptunshuffle">' + ICON.undo + "Original order</button>" : "") +
+    (sec.qs.some((q) => q.type === "wfr") ? '<button class="btn ghost" data-act="ptrandom">' + ICON.shuffle + (sec.grader === "ebq" ? "Random prompt I haven't done" : "Random article I haven't done") + "</button>" : "") +
     '<button class="btn ghost" data-act="ptretest">' +
     ICON.redo +
     'Retest missed questions</button><button class="btn ghost" data-act="ptprint">' +
@@ -417,7 +564,14 @@ function syncMain() {
 }
 function checkCur() {
   const c = cur3();
-  if (isWritten(c.q)) {
+  if (c.q.type === "wfr") {
+    /* Check (or recheck after editing): the key-word checker grades every part; earlier overrides and AI grades are dropped. */
+    c.s.auto = frqGrade(c.q, c.v.sec.sources[c.q.src], c.s.ans);
+    c.s.ai = null;
+    c.s.aiErr = "";
+    c.s.pm = {};
+    c.s.revealed = true;
+  } else if (isWritten(c.q)) {
     if (isTyped(c.q) && !c.s.revealed) c.q.parts.forEach((p) => (c.s.pm[p.k] = typedOk(c.s.ans[p.k], p.accept)));
     c.s.revealed = true;
   }
@@ -498,6 +652,28 @@ ACT.ptpart = (t) => {
   const c = cur3();
   c.s.pm[t.dataset.p] = t.dataset.v === "1";
   c.s.mark = null;
+  syncMain();
+  render();
+};
+/* Jump to a question in this section that hasn't been checked yet. */
+ACT.ptrandom = () => {
+  const v = curView(),
+    open = v.ids.map((id, n) => (frac(v.sec.byId[id], v.st[id]) === null ? n : -1)).filter((n) => n >= 0);
+  if (!open.length) {
+    PT.msg = "You've checked every one in this set.";
+    return render();
+  }
+  v.h.cur = open[Math.floor(Math.random() * open.length)];
+  render();
+  window.scrollTo(0, 0);
+};
+ACT.ptclear = () => {
+  const c = cur3();
+  c.s.ans = {};
+  c.s.auto = c.s.ai = null;
+  c.s.pm = {};
+  c.s.revealed = false;
+  c.s.aiErr = "";
   syncMain();
   render();
 };
