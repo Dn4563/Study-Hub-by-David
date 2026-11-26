@@ -29,6 +29,15 @@ function unitProgress(u) {
       if (x && (x.checked || x.mark != null || Object.keys(x.pm || {}).length)) answered++;
     });
   });
+  /* A free-response unit counts questions done (practiced or in a mock exam). */
+  if (data.fr) {
+    const fr = readJSON(keyOf(u, "fr")) || {},
+      done = fr.done || {};
+    data.fr.items.forEach((q) => {
+      total++;
+      if (done[q.id]) answered++;
+    });
+  }
   return { got: ids.filter((id) => known[id]).length, tot: ids.length, answered: answered, total: total };
 }
 
@@ -169,6 +178,15 @@ function initShell() {
   indexCards();
   rebuild();
   const secs = D.practice.sections;
+  /* A free-response unit (fr.json) has its own simple page, plus Settings. */
+  if (hasFR()) {
+    frLoad();
+    TABS = [["fr", "Free response"], ["set", "Settings"]];
+    UI = { tab: "fr", deck: 0, run: null, q: null, qmsg: "" };
+    if (SAVE.ui && SAVE.ui.tab === "set") UI.tab = "set";
+    document.title = UNIT.label + ": " + UNIT.title + " | " + COURSE.name;
+    return;
+  }
   /* A unit with no cards is practice only: no Study plan, Learn, Study guide, Flashcards or Quiz. */
   TABS = ALL.length
     ? [
@@ -216,6 +234,8 @@ function view() {
     case "pt":
     case "exam":
       return ptHTML();
+    case "fr":
+      return frHTML();
     case "cheat":
       return cheatHTML();
     case "prog":

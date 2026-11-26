@@ -40,7 +40,7 @@ function gradeAAQPart(art, k, raw) {
     const named = Object.entries(AAQ_METHODS)
       .filter(([m, keys]) => m !== R.answer && aaqHas(t, keys))
       .map(([m]) => m);
-    if (ck(!!right, `Names the correct method: ${R.answer}.`, named.length ? `You named ${named.join(" / ")}, but this study is a ${R.answer}.` : `Doesn't name a research method. The answer is: ${R.answer}.`)) pts = 1;
+    if (ck(!!right, `Names the correct method: ${R.answer}.`, named.length ? `You named ${named.join(" / ")}, but this study is ${/^[aeiou]/i.test(R.answer) ? "an" : "a"} ${R.answer}.` : `Doesn't name a research method. The answer is: ${R.answer}.`)) pts = 1;
     if (!right && R.trap && named.includes(R.trap)) tips.push(R.trapHint);
     if (right && named.length) tips.push(`You also mentioned ${named.join(" / ")}. Only name one method, or a reader may see it as contradicting yourself.`);
     if (!aaqHas(t, R.clues)) tips.push('Not required for the point, but backing it up with a clue from the article ("participants were randomly assigned…") shows you understand why.');

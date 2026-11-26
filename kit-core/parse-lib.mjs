@@ -104,6 +104,19 @@ export function parseUnit(dir) {
     });
     byTerm[term].asks = list;
   }
+  /* Free-response unit: fr.json (the questions, guide and links) and checker.json (the key-word checker's settings). */
+  if (existsSync(join(dir, "fr.json"))) {
+    data.fr = JSON.parse(readIf(dir, "fr.json", "{}"));
+    const ck = JSON.parse(readIf(dir, "checker.json", "{}"));
+    if (!ck.frq) throw new Error(dir + ": fr.json needs checker.json (npm run import writes it)");
+    data.practice.frq = ck.frq;
+    data.fr.items.forEach((q) => {
+      if (!q.id || !q.source || !Array.isArray(q.parts) || !q.parts.length) throw new Error("fr.json: " + (q.id || "an item") + " needs id, source and parts");
+      q.parts.forEach((p) => {
+        if (!p.prompt || !p.model) throw new Error("fr.json: " + q.id + " part " + p.k + " needs a prompt and a model answer");
+      });
+    });
+  }
   if (guide.cheat) data.cheat = guide.cheat;
   if (guide.topicDeck) data.topicDeck = guide.topicDeck;
   return data;

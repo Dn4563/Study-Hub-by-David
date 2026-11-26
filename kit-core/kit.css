@@ -427,3 +427,66 @@ textarea { width: 100%; background: var(--sheet); border: 1px solid var(--rule);
 .gemgen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0; padding: 10px 14px; border-radius: var(--r-sm); background: var(--sunk); }
 .gemgen label { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 640px) { .grows div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+
+/* Free-response unit page (94-fr.js) */
+.frcard h2 { margin: 0 0 8px; }
+.frcard p { max-width: 62ch; }
+.frpick { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 6px; }
+.frmore { margin: 4px 0 24px; padding: 0 4px; }
+.frmore p { margin: 0 0 10px; max-width: 62ch; }
+.frmore a, .frcite a { color: var(--accent); }
+.frlinks { margin: 0 0 10px; padding-left: 22px; }
+.frlinks li { margin: 4px 0; }
+.frback { margin: 0 0 6px; }
+.frback .btn { padding-left: 4px; }
+.frhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; }
+.frhead h2, .frhead p { margin: 0; }
+.frsplit { display: grid; gap: 22px; }
+.frsrc { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); padding: 20px 22px; }
+.frsrc h4 { margin: 0 0 4px; font: 600 1.2rem/1.3 var(--serif); }
+.frsrc .frtitle { font-weight: 600; margin: 0 0 6px; }
+.frsrc .frlabel { margin: 0 0 12px; font-size: .9rem; color: var(--ink-2); }
+.frsub { margin: 18px 0 4px; font-size: 1rem; font-weight: 700; }
+.frone + .frone { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--rule); }
+.frsrc .stext { margin: 0 0 10px; }
+.frlist { margin: 4px 0 12px; padding-left: 24px; font-family: var(--serif); font-size: 1.05rem; line-height: 1.55; max-width: 66ch; }
+.frlist li { margin: 3px 0; }
+.frcite { margin: 16px 0 0; font-size: .88rem; color: var(--ink-2); }
+.frsrc .tablewrap { margin: 14px 0; }
+.frans { white-space: pre-wrap; margin: 4px 0 10px; padding: 10px 12px; background: var(--sunk); border-radius: var(--r-sm); line-height: 1.5; }
+.frfoot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.frfoot .danger { margin-left: auto; }
+.frguide h2 { margin-top: 0; }
+.frsetup h2 { margin-top: 0; }
+.frsetup p { max-width: 64ch; }
+.frtime { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 16px 6px; margin: 16px 0 4px; max-width: 34rem; }
+.frtime legend { font-weight: 700; padding: 0 6px; }
+.frtime label { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+.frtime input { width: 18px; height: 18px; accent-color: var(--accent); }
+.frbar { position: sticky; top: 49px; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 16px; padding: 10px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-sm); }
+.frclock { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.1rem; min-width: 6.5rem; }
+.frbar.warn { border-color: var(--bad); background: var(--bad-wash); }
+.frbar.warn .frclock { color: var(--bad); }
+.frwarn { font-weight: 600; font-size: .95rem; }
+.frqs { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.frqn { display: none; }
+.frask { font-weight: 700; font-size: 1.08rem; line-height: 1.45; margin: 0 0 6px; max-width: 62ch; }
+.frres h2 { margin-top: 0; }
+.frres ~ .panel h3 { margin-top: 0; }
+.frsrcbox { margin: 6px 0 14px; }
+.frsrcbox > summary { cursor: pointer; font-weight: 600; color: var(--accent); margin-bottom: 10px; }
+@media (min-width: 1000px) {
+  #app:has(.frsplit) { max-width: 84rem; }
+  .frsplit { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; }
+  .frask-src { display: none; }
+  .frleft { position: sticky; top: 112px; max-height: calc(100vh - 128px); overflow-y: auto; }
+}
+@media (max-width: 640px) {
+  .frsrc { padding: 16px; }
+  .frbar { top: 45px; gap: 8px; padding: 8px 10px; }
+  .frsub { margin-left: auto; }
+  .frqs { order: 3; flex-basis: 100%; margin-left: 0; }
+  .frqs .btn { flex: 1; }
+  .frqw { display: none; }
+  .frqn { display: inline; }
+}

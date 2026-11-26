@@ -668,7 +668,9 @@ ACT.ptrandom = () => {
   window.scrollTo(0, 0);
 };
 ACT.ptclear = () => {
-  const c = cur3();
+  const c = cur3(),
+    n = Object.values(c.s.ans || {}).filter((v) => String(v).trim()).length;
+  if (n && !ask("Clear all " + plural(n, "answer") + " you wrote for this question? This can't be undone.")) return;
   c.s.ans = {};
   c.s.auto = c.s.ai = null;
   c.s.pm = {};

@@ -24,8 +24,8 @@ function setHTML() {
     (ALL.length ? chk("hooks", "Show memory hooks") : "") +
     (hasOpt ? chk("optDeck", "Include optional decks in All decks, the progress meter and the mixed quiz") : "") +
     (UNIT.recall && COURSE.units.indexOf(UNIT) > 0 ? chk("recall", "Recall questions from earlier units: now and then a Learn lesson asks one question from an earlier unit. It never counts against the lesson.") : "") +
-    "<h3>Answering</h3>" +
-    chk("confirm", "Lock in answers: pick a choice, then press Lock in answer, so a misclick does not count. Applies to Learn, Quiz and the Practice Test.") +
+    /* A free-response unit has no multiple choice, so no lock-in setting. */
+    (hasFR() ? "" : "<h3>Answering</h3>" + chk("confirm", "Lock in answers: pick a choice, then press Lock in answer, so a misclick does not count. Applies to Learn, Quiz and the Practice Test.")) +
     (ALL.length
       ? '<h3>Flashcards</h3><div class="ctl">' +
         FC_CTL() +
@@ -84,7 +84,7 @@ document.addEventListener("input", (e) => {
 });
 ACT.exp = () => {
   const e = document.getElementById("xport");
-  e.value = JSON.stringify({ course: COURSE.id, unit: UNIT.id, known: SAVE.known, trouble: SAVE.trouble, done: SAVE.done, li: SAVE.li, secRev: SAVE.secRev, star: SAVE.star, settings: SAVE.settings, pt: PTpack() });
+  e.value = JSON.stringify({ course: COURSE.id, unit: UNIT.id, known: SAVE.known, trouble: SAVE.trouble, done: SAVE.done, li: SAVE.li, secRev: SAVE.secRev, star: SAVE.star, settings: SAVE.settings, pt: PTpack(), fr: hasFR() ? readJSON(FRK()) : undefined });
   e.select();
 };
 ACT.imp = () => {
@@ -106,6 +106,10 @@ ACT.imp = () => {
     UI.deck = 0;
     UI.q = null;
     if (o.pt) PTload(o.pt);
+    if (o.fr && hasFR()) {
+      writeJSON(FRK(), o.fr);
+      frLoad();
+    }
     save();
     FC = null;
     UI.L = null;
@@ -125,6 +129,11 @@ ACT.resetall = () => {
   UI.L = null;
   FC = null;
   PTreset();
+  if (hasFR()) {
+    writeJSON(FRK(), {});
+    frLoad();
+    frTimer();
+  }
   save();
   render();
 };

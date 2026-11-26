@@ -124,61 +124,115 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     }
     assertNoErrors(unit + " tabs");
 
-    // 2b. Practice-only unit (no cards), e.g. AAQ & EBQ free response: no Learn or Quiz; check the AAQ / EBQ checker,
-    // overrides, the random button, Gemini settings and (with a fake reply) Gemini grading.
+    // 2b. Free-response unit (fr.json): its own page with Practice and a timed Mock exam. Checks the AAQ / EBQ
+    // checker on the kit's model answers, Next, the confirm on Clear, the mock draw (1 AAQ + 1 EBQ), time options,
+    // the countdown, Hide / Show, the 5-minute warning, time-up submit, and Gemini (fake reply, no network).
+    if (P.w.eval("hasFR() ? 1 : 0")) {
+      ok(P.qa(".tab").map((t) => t.dataset.t).join(",") === "fr,set", "free-response unit shows only its page and Settings");
+      P.click(P.q('.tab[data-t="fr"]'), "Free response tab");
+      const asked = [];
+      let answer = true;
+      P.w.confirm = (m) => (asked.push(m), answer);
+      const setAns = (k, v) => {
+        const ta = P.q('textarea[data-fra="' + k + '"]');
+        ta.value = v;
+        ta.dispatchEvent(new P.w.Event("input", { bubbles: true }));
+      };
+      P.w.eval("D.fr.items").forEach((q) => {
+        const g = P.w.eval("(() => { const q = D.fr.items.find(x => x.id === " + JSON.stringify(q.id) + "); return frqGrade(q, q.source, Object.fromEntries(q.parts.map(p => [p.k, p.model]))); })()");
+        ok(g && g.total === g.max, q.id + ": its model answers get full marks from the checker (" + (g && g.total) + " of " + (g && g.max) + ")");
+      });
+      for (const kind of ["aaq", "ebq"]) {
+        P.click(P.q('[data-act="frgo"][data-k="' + kind + '"]'), kind + " practice");
+        ok(P.q(".frsrc") && P.qa('textarea[data-fra]').length >= 5, kind + ": the source and an answer box per part show");
+        ok(!P.q('[data-act="frclear"]'), kind + ": Clear only shows once something is written");
+        const q = P.w.eval("frCurS().q");
+        q.parts.forEach((p) => setAns(p.k, p.model));
+        P.click(P.q('[data-act="frcheck"]'), "Check my answers");
+        ok(P.w.eval("frCurS().s.auto.total") === P.w.eval("frMax(frCurS().q)") && P.q(".wscore") && P.q(".wchecks li.ok"), kind + ": Check shows the score and checklist");
+        if (kind === "aaq") {
+          const wrongM = P.w.eval("Object.keys(frqCfg().methods).find(m => m !== frCurS().q.r.A.answer)");
+          setAns("A", "This study is a " + wrongM + ".");
+          P.click(P.q('[data-act="frcheck"]'), "Recheck");
+          ok(P.w.eval("frCurS().s.auto.parts.A.pts") === 0 && /You named/.test(P.q(".wchecks").textContent), "a wrong method gets 'You named…' feedback");
+          const before = P.w.eval("frPoints(frCurS().q, frCurS().s)");
+          P.click(P.q('[data-act="frpart"][data-p="A"][data-v="1"]'), "override part A");
+          ok(P.w.eval("frPoints(frCurS().q, frCurS().s)") === before + 1, "I got it overrides the checker");
+        }
+        answer = false;
+        P.click(P.q('[data-act="frclear"]'), "Clear my answers (cancel)");
+        ok(/Clear all/.test(asked[asked.length - 1] || "") && P.w.eval("frCurS().s.revealed"), "Clear asks first, and Cancel keeps the answers");
+        answer = true;
+        P.click(P.q('[data-act="frclear"]'), "Clear my answers (OK)");
+        ok(!P.w.eval("frCurS().s.revealed") && P.q('textarea[data-fra="A"]').value === "", "OK clears them");
+        ok(P.w.eval("FR.done[" + JSON.stringify(q.id) + "]"), kind + ": a checked question counts as done");
+        P.click(P.q('[data-act="frnext"]'), "Next");
+        ok(P.w.eval("frItems('" + kind + "').length") === 1 || P.w.eval("frCurS().q.id") !== q.id, kind + ": Next opens another question");
+        P.click(P.q('[data-act="frgo"][data-v="home"]'), "back to the free-response page");
+      }
+      P.click(P.q('[data-act="frgo"][data-v="guide"]'), "How the AAQ and EBQ work");
+      ok(P.qa(".frguide").length === 2, "the guide has an AAQ part and an EBQ part");
+      P.click(P.q('[data-act="frgo"][data-v="home"]'), "back");
+      // Mock exam
+      P.click(P.q('[data-act="frgo"][data-v="mock"]'), "set up a mock exam");
+      ok(P.qa('[data-act="frmult"]').length === 3, "three time options: regular, +50%, +100%");
+      P.click(P.q('[data-act="frmult"][data-m="2"]'), "+100% time");
+      P.click(P.q('[data-act="frstart"]'), "Start mock exam");
+      const m = P.w.eval("FR.mock");
+      ok(m.ids.length === 2 && P.w.eval("frById(FR.mock.ids[0]).grader") === "aaq" && P.w.eval("frById(FR.mock.ids[1]).grader") === "ebq", "the mock draws 1 AAQ + 1 EBQ");
+      const mins = Math.round((m.endAt - Date.now()) / 60000);
+      ok(mins === 140, "+100% time gives 140 minutes (got " + mins + ")");
+      ok(/^2:19:5\d|^2:20:00/.test(P.q("#frtime").textContent) && !P.q(".frbar .wchecks"), "the countdown shows at the top and no feedback during the exam");
+      P.click(P.q('[data-act="frhide"]'), "Hide timer");
+      ok(!P.q("#frtime") && /Show timer/.test(P.q('[data-act="frhide"]').textContent), "Hide hides the clock and offers Show timer");
+      setAns("A", "This is an experiment.");
+      P.click(P.q('[data-act="frq"][data-i="1"]'), "Question 2");
+      ok(P.q(".frask") && P.w.eval("FR.mock.q") === 1, "Question 2 shows the EBQ question");
+      P.w.eval("FR.mock.endAt = Date.now() + 4 * 60000; FR_test.tick()");
+      ok(P.q("#frtime") && P.q(".frbar.warn") && /Less than 5 minutes/.test(P.q("main").textContent), "at 5 minutes left the clock comes back and turns red");
+      answer = false;
+      P.click(P.q('[data-act="frsubmit"]'), "Submit (cancel)");
+      ok(!P.w.eval("FR.mock.submitted") && /Submit your mock exam/.test(asked[asked.length - 1]), "Submit asks first");
+      answer = true;
+      P.w.eval("FR.mock.endAt = Date.now() - 10; FR_test.tick()");
+      ok(P.w.eval("FR.mock.submitted && FR.mock.timeUp") && /Mock exam results/.test(P.q("main").textContent) && /Time ran out/.test(P.q("main").textContent), "time up submits and shows results");
+      ok(P.w.eval("frPoints(frById(FR.mock.ids[0]), FR.mock.st[FR.mock.ids[0]])") === 1, "the mock grades what was written (part A of the AAQ)");
+      P.click(P.q('[data-act="frnewmock"]'), "New mock exam");
+      ok(P.q('[data-act="frstart"]'), "New mock exam goes back to the setup");
+      // One question only: AAQ on its suggested 25 minutes (+50% = 38), EBQ on 45.
+      ok(P.qa('[data-act="frtake"]').length === 3, "what to take: full section, AAQ only, EBQ only");
+      P.click(P.q('[data-act="frtake"][data-v="aaq"]'), "AAQ only");
+      P.click(P.q('[data-act="frmult"][data-m="1.5"]'), "+50% time");
+      ok(/38 minutes/.test(P.q(".frsetup").textContent), "AAQ only with +50% shows 38 minutes");
+      P.click(P.q('[data-act="frstart"]'), "Start AAQ only");
+      ok(P.w.eval("FR.mock.ids.length") === 1 && P.w.eval("frById(FR.mock.ids[0]).grader") === "aaq" && !P.q('[data-act="frq"]'), "AAQ only draws one AAQ, with no question buttons");
+      ok(Math.round((P.w.eval("FR.mock.endAt") - Date.now()) / 60000) === 38, "AAQ only with +50% runs 38 minutes");
+      P.w.eval("FR.mock.endAt = Date.now() - 10; FR_test.tick()");
+      ok(/AAQ score/.test(P.q(".wscore").textContent) && P.q(".frres"), "AAQ only shows its own score");
+      P.click(P.q('[data-act="frnewmock"]'), "New mock exam");
+      P.click(P.q('[data-act="frtake"][data-v="ebq"]'), "EBQ only");
+      P.click(P.q('[data-act="frmult"][data-m="1"]'), "regular time");
+      P.click(P.q('[data-act="frstart"]'), "Start EBQ only");
+      ok(P.w.eval("frById(FR.mock.ids[0]).grader") === "ebq" && Math.round((P.w.eval("FR.mock.endAt") - Date.now()) / 60000) === 45, "EBQ only draws one EBQ on 45 minutes");
+      P.click(P.q('.tab[data-t="set"]'), "Settings tab");
+      ok(P.q("#gemkey") && P.q(".gemsteps"), "Settings has the Gemini box with setup steps");
+      assertNoErrors(unit + " free response");
+      P.close();
+      // Gemini grading with a fake reply (no real key or network).
+      P = open(unit, { "sk:gemini": JSON.stringify({ key: "AIzaFAKE", model: "gemini-2.5-flash" }) });
+      P.w.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ parts: { A: { points: 1, earned: ["Names the method"], missing: [], tip: "Add a clue." } }, overall: "Good start." }) }] } }] }) });
+      P.click(P.q('[data-act="frgo"][data-k="aaq"]'), "AAQ practice");
+      ok(P.q('[data-act="frgem"]') && P.q('[data-act="frgen"]'), "with a key, Grade with Gemini and Generate appear");
+      await P.w.FR_test.grade();
+      ok(P.w.eval("frCurS().s.ai && frCurS().s.ai.parts.A.pts") === 1 && /graded by Gemini/.test(P.q(".wscore").textContent), "Gemini's grade is shown");
+      assertNoErrors(unit + " gemini");
+      P.close();
+      log(`  ${unit}: OK`);
+      continue;
+    }
+    // 2c. Practice-only unit (no cards and no fr.json): only the practice tabs.
     if (!P.q('.tab[data-t="learn"]')) {
       ok(!P.q('.tab[data-t="quiz"]') && !P.q('.tab[data-t="plan"]') && P.q('.tab[data-t="pt"]'), "practice-only unit shows only practice tabs");
-      if (P.w.eval("D.practice.frq ? 1 : 0")) {
-        const setAns = (k, v) => {
-          const ta = P.q('textarea[data-ans="' + k + '"]');
-          ta.value = v;
-          ta.dispatchEvent(new P.w.Event("input", { bubbles: true }));
-        };
-        P.click(P.q('.tab[data-t="pt"]'), "Practice Test tab");
-        const secs = P.w.eval("PT.secs.map(s => s.grader || '')");
-        const ai = secs.indexOf("aaq"), ei = secs.indexOf("ebq");
-        if (ai >= 0) {
-          P.click(P.qa('[data-act="ptsec"]')[ai], "AAQ practice");
-          ok(P.q(".src .sblock") && P.q(".src table"), "AAQ shows the article's sections and table");
-          const answer = P.w.eval("cur3().q.r.A.answer");
-          const wrongM = P.w.eval("Object.keys(frqCfg().methods).find(m => m !== cur3().q.r.A.answer)");
-          setAns("A", "This study is a " + answer + " because participants were randomly assigned.");
-          P.click(P.q('[data-act="ptcheck"]'), "Check my answers");
-          ok(P.w.eval("cur3().s.auto.parts.A.pts") === 1, "AAQ part A: the right method earns the point");
-          ok(P.q(".wchecks li.ok") && P.q(".wscore"), "checked AAQ shows the checklist and score");
-          setAns("A", "This study is a " + wrongM + ".");
-          P.click(P.q('[data-act="ptcheck"]'), "Recheck");
-          ok(P.w.eval("cur3().s.auto.parts.A.pts") === 0 && /You named/.test(P.q(".wchecks").textContent), "a wrong method gets Phineas's 'You named…' feedback");
-          const before = P.w.eval("frac(cur3().q, cur3().s)");
-          P.click(P.q('[data-act="ptpart"][data-p="A"][data-v="1"]'), "override part A");
-          ok(P.w.eval("frac(cur3().q, cur3().s)") > before, "I got it overrides the checker");
-          const curBefore = P.w.eval("curView().h.cur");
-          P.click(P.q('[data-act="ptrandom"]'), "random one I haven't done");
-          ok(P.w.eval("curView().h.cur") !== curBefore && P.w.eval("frac(cur3().q, cur3().s)") === null, "the random button opens an unchecked article");
-        }
-        if (ei >= 0) {
-          P.click(P.qa('[data-act="ptsec"]')[ei], "EBQ practice");
-          P.w.eval("cur3().q.parts.map(p => p.k)").forEach((k) => setAns(k, P.w.eval("cur3().q.parts.find(p => p.k === '" + k + "').model")));
-          P.click(P.q('[data-act="ptcheck"]'), "Check EBQ");
-          ok(P.w.eval("cur3().s.auto.total") >= 5, "the EBQ model answer scores well with the checker (" + P.w.eval("cur3().s.auto.total") + " of 7)");
-        }
-        P.click(P.q('.tab[data-t="set"]'), "Settings tab");
-        ok(P.q("#gemkey") && P.q(".gemsteps"), "Settings has the Gemini box with setup steps");
-        assertNoErrors(unit + " free response");
-        P.close();
-        // Gemini grading with a fake reply (no real key or network).
-        P = open(unit, { "sk:gemini": JSON.stringify({ key: "AIzaFAKE", model: "gemini-2.5-flash" }) });
-        P.w.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ parts: { A: { points: 1, earned: ["Names the method"], missing: [], tip: "Add a clue." } }, overall: "Good start." }) }] } }] }) });
-        P.click(P.q('.tab[data-t="pt"]'), "Practice Test tab");
-        if (ai >= 0) {
-          P.click(P.qa('[data-act="ptsec"]')[ai], "AAQ practice");
-          ok(P.q('[data-act="gemgrade"]') && P.q(".gemgen"), "with a key, Grade with Gemini and Generate appear");
-          await P.w.ACT_gemgradeForTest();
-          ok(P.w.eval("cur3().s.ai && cur3().s.ai.parts.A.pts") === 1 && /graded by Gemini/.test(P.q(".wscore").textContent), "Gemini's grade is shown");
-        }
-        assertNoErrors(unit + " gemini");
-        P.close();
-      }
       log(`  ${unit}: OK`);
       continue;
     }
