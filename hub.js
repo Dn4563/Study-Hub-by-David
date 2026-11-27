@@ -37,7 +37,7 @@ function unitRow(c, u) {
 function course(c, i, all) {
   const p = all.length > 1 ? i / (all.length - 1) : 0;
   const note = (c.links || []).length
-    ? `<p class="note">${c.links.map(l => `<a href="${esc(l.url)}">${esc(l.label)}</a>`).join(', ')}</p>` : '';
+    ? `<p class="note">${c.links.map(l => `${esc(l.before || '')}<a href="${esc(l.url)}">${esc(l.label)}</a>${esc(l.after || '')}`).join(' ')}</p>` : '';
   return `<li class="course" data-id="${esc(c.id)}" style="--i:${i};--p:${p};--light:${esc(c.accent)};--dark:${esc(c.accentDark || c.accent)}">
     <h2 class="tab">${esc(c.name)}</h2>
     <div class="sheet">

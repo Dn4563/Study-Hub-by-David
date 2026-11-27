@@ -5,8 +5,7 @@
    a round come back at the start of the next one. The session ends with a 10-question mixed check.
    Research behind it: testing beats rereading, and trying a question before studying helps as long as the answer
    follows (see the redesign brief). Saved in SAVE.tonight for today only. */
-const TN_MINS = [30, 45, 60, 90],
-  TN_FINAL = 10;
+const TN_FINAL = 10;
 const tonightState = () => (SAVE && SAVE.tonight) || null;
 const tonightToday = (T) => T && T.day === isoDay(today0());
 const tnCard = (id) => BYID[id];
@@ -66,9 +65,9 @@ function tonightSetup() {
           .join("") +
         "</div>",
       () =>
-        '<h2>How long do you have tonight?</h2><div class="chips" role="group" aria-label="Minutes tonight">' +
-        TN_MINS.map((m) => '<button class="chip" data-act="tnset" data-k="mins" data-v="' + m + '" aria-pressed="' + (UI.tnDraft.mins === m) + '">' + m + " min</button>").join("") +
-        '</div><p class="muted">Terms you already marked as known are skipped. If there\'s more than fits, the rest waits in Learn.</p>',
+        "<h2>How long do you have tonight?</h2>" +
+        minsSelectHTML("tonight", UI.tnDraft.mins, "Time tonight") +
+        '<p class="muted">Terms you already marked as known are skipped. If there\'s more than fits, the rest waits in Learn.</p>',
       () => {
         const plan = tonightRounds(UI.tnDraft.mins);
         if (!plan.rounds.length) return "<h2>Tonight's session</h2><p>You've marked every term in this unit as known. The session will be just the mixed check.</p>";
@@ -101,6 +100,7 @@ function tonightSetup() {
     },
   });
 }
+MINS_SET.tonight = (m) => UI.tnDraft && (UI.tnDraft.mins = m);
 ACT.tnset = (t) => {
   const d = UI.tnDraft;
   if (t.dataset.k === "mins") d.mins = Number(t.dataset.v);

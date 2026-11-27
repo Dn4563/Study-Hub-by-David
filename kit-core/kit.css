@@ -652,3 +652,7 @@ input.fhide { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-e
   .midread { grid-template-columns: minmax(0, 1fr); }
   .midread dd { border-top: 0; padding-top: 0; }
 }
+
+/* "How much time" and "How many days" dropdowns in the setup pop-ups */
+.minsel { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 18px 0 6px; font-weight: 600; }
+.minsel select { font-weight: 400; font-size: 1rem; min-width: 11rem; padding: 8px 10px; }

@@ -658,7 +658,13 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     P.click(P.q('[data-act="tnstart"]'), "Test tomorrow?");
     ok(P.q('#modalhost [data-act="tnset"][data-v="read"]'), "tonight's setup asks Read first or Quiz me first");
     P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
-    P.click(P.q('#modalhost [data-act="tnset"][data-k="mins"][data-v="30"]'), "30 minutes");
+    ok(P.qa('#modalhost select[data-mins="tonight"] option').length >= 12, "tonight's time is a dropdown up to 5 hours");
+    P.change(P.q('#modalhost select[data-mins="tonight"]'), "30");
+    ok(P.w.eval("UI.tnDraft.mins") === 30, "the dropdown sets tonight's time");
+    {
+      const r30 = P.w.eval("tonightRounds(30)"), r180 = P.w.eval("tonightRounds(180)");
+      ok(r180.rounds.length >= r30.rounds.length && (!r30.left || r180.rounds.length > r30.rounds.length), "3 hours tonight fits more rounds than 30 minutes");
+    }
     P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
     P.click(P.q('#modalhost [data-act="mnext"]'), "Start round 1");
     ok(P.w.eval("UI.tab") === "tonight" && P.qa(".tncard").length >= 1 && P.qa(".tncard").length <= 10, "round 1 shows 1 to 10 terms to read");
@@ -688,7 +694,9 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     P.change(P.q('#modalhost input[data-plan="date"]'), iso);
     ok(/tomorrow/.test(P.q("#modalhost .hint").textContent), "test date shows as tomorrow");
     P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
-    P.click(P.q('#modalhost [data-act="plset"][data-k="mins"][data-v="60"]'), "60 minutes");
+    ok(P.qa("#modalhost select[data-pdays] option").length === 1 && /Just today/.test(P.q("#pdayshint").textContent), "a test tomorrow leaves 1 study day");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
+    P.change(P.q('#modalhost select[data-mins="plan"]'), "60");
     P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
     P.click(P.q('#modalhost [data-act="plset"][data-k="style"][data-v="read"]'), "Read first");
     P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
@@ -746,6 +754,24 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       assertNoErrors(unit + " study plan");
       saved.close();
     }
+    // 8c. Study plan days and minutes: exactly N days, old "90+" plans, a test 10 days out.
+    {
+      const pd = open(unit);
+      const r = pd.w.eval(
+        "(() => { const P = planState(), d = new Date(today0().getTime() + 10 * DAY); P.date = isoDay(d); P.nodate = false; P.mins = 60; P.minsExact = true;" +
+          " buildRoute(); const all = schedule().length; P.days = 3; const three = schedule(); P.days = 30; const capped = schedule().length;" +
+          " delete P.days; P.mins = 90; P.minsExact = false; const old = budget(); P.minsExact = true; const exact = budget();" +
+          " P.nodate = true; P.date = null; const nod = schedule().length;" +
+          " return { all: all, three: three.length, fin: three[2].steps.some((s) => s.final) && !three[0].steps.some((s) => s.final), capped: capped, old: old, exact: exact, nod: nod }; })()",
+      );
+      ok(r.all === 10, "with no days chosen, the route covers every day until the test");
+      ok(r.three === 3 && r.fin, "choosing 3 days makes a 3-day route with the mock and re-check on day 3");
+      ok(r.capped === 10, "more days than are left is capped at the test");
+      ok(r.old === 120 && r.exact === 90, "an old 90+ plan still means 2 hours; a new 1 h 30 means 90 minutes");
+      ok(r.nod === 7, "no test date: a week by default");
+      assertNoErrors(unit + " plan days");
+      pd.close();
+    }
     // 9. Progress saved by the old single-unit kit carries over
     const u = course.units.find((x) => x.id === unit);
     if (u.legacyKeys && u.legacyKeys.kit) {
@@ -797,7 +823,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     const drop = mu[mu.length - 1];
     P.click(P.q('#modalhost [data-act="midset"][data-k="unit"][data-v="' + drop + '"]'), "unit toggle");
     P.click(P.q('#modalhost [data-act="mnext"]'), "next");
-    P.click(P.q('#modalhost [data-act="midset"][data-k="mins"][data-v="15"]'), "15 minutes");
+    P.change(P.q('#modalhost select[data-mins="mid"]'), "15");
     P.click(P.q('#modalhost [data-act="mnext"]'), "next");
     P.click(P.q('#modalhost [data-act="midset"][data-k="style"][data-v="read"]'), "read first");
     P.click(P.q('#modalhost [data-act="mnext"]'), "next");
@@ -827,6 +853,10 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     P.click(P.q('[data-act="midq"]'), "start the questions");
     P.w.eval("(() => { const R = UI.run; while (!R.done) { rpickAct(R.qs[R.i].options.findIndex((o) => o.ok)); ACT.rnext(); } ACT.rdone(); })()");
     ok(/Done today/.test(P.q("main").textContent), "today's review counts as done");
+    {
+      const lr = P.w.eval("(() => { const m = SAVE.mid.mins; SAVE.mid.mins = 120; const r = { rounds: midRounds(), per: midCount(), text: midDayText() }; SAVE.mid.mins = m; return r; })()");
+      ok(lr.rounds > 1 && lr.per <= 45 && /2 hours a day: \d rounds of \d+ questions/.test(lr.text), "a 2-hour midterm day is split into rounds of up to 45 (" + lr.text + ")");
+    }
     assertNoErrors("midterm review");
     // mock: answer one, reload keeps the same mock and answer; New mock changes it
     P.go("exam", "Mock midterm tab");

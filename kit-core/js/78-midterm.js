@@ -4,7 +4,6 @@
    test is one of the best ways to study. Answers here also update each unit's own trouble terms, so the unit's Learn
    and Quiz bring those terms back. The real dates, length and format come from course.json "midterm" (VERIFY until
    the teacher posts them). Saved in SAVE.mid of the midterm page (sk:<course>:mid:kit). */
-const MID_MINS = [15, 30, 45, 60];
 function midState() {
   if (!SAVE.mid) SAVE.mid = { v: 1, date: null, nodate: false, units: null, mins: null, style: "quiz", check: true, setup: false, hist: {}, days: {}, seed: 1, last: [] };
   return SAVE.mid;
@@ -51,8 +50,15 @@ function midStrength(u) {
 }
 const midWord = (p) => (p === null ? "Not checked yet" : p >= 85 ? "Strong" : p >= 60 ? "Getting there" : "Needs work");
 
-/* Questions per day from the minutes: about 0.7 a minute, between 10 and 45. */
-const midCount = () => Math.min(45, Math.max(10, Math.round((midState().mins || 30) * 0.7)));
+/* Questions per day from the minutes: about 0.7 a minute, at least 10. A long day (say 2 hours) is split into
+   rounds of at most 45 questions, so nobody faces one giant set. midCount() is the size of one round. */
+const midTotal = () => Math.max(10, Math.round((midState().mins || 30) * 0.7));
+const midRounds = () => Math.ceil(midTotal() / 45);
+const midCount = () => Math.ceil(midTotal() / midRounds());
+const midDayText = () => {
+  const r = midRounds();
+  return r > 1 ? minsLabel(midState().mins || 30) + " a day: " + r + " rounds of " + midCount() + " questions" : plural(midCount(), "question") + ", about " + minsLabel(midState().mins || 30);
+};
 /* Weak units get more questions: weight 1 to 3 by strength (not checked counts as halfway), at least 1 each. */
 function midAlloc(n) {
   const us = midPicked(),
@@ -219,19 +225,21 @@ function midHTML() {
       '<div class="qnav"><button class="btn" data-act="midsetup">Set it up (1 minute)</button><button class="btn sec" data-act="midgo">Just start mixed review</button></div></section>';
   } else {
     const n = midDaysLeft(),
-      today = M.days[isoDay(today0())] || 0;
+      today = M.days[isoDay(today0())] || 0,
+      rounds = midRounds(),
+      done = Math.min(rounds, Math.floor(today / midCount()));
     h +=
       '<section class="panel midtoday"><div><h2>Today\'s review</h2><p class="muted">' +
       (n === null ? "" : n < 0 ? "Your midterm date has passed. " : n === 0 ? "Midterm today: a short warm-up. " : plural(n, "day") + " to go. ") +
-      plural(midCount(), "question") +
-      ", about " +
-      (M.mins || 30) +
-      " minutes, mixed from " +
+      esc(midDayText()) +
+      ", mixed from " +
       plural(midPicked().length, "unit") +
       ".</p>" +
-      (today ? '<p class="midok">' + ICON.check + "Done today: " + plural(today, "question") + ".</p>" : "") +
+      (today
+        ? '<p class="midok">' + ICON.check + "Done today: " + (rounds > 1 ? done + " of " + rounds + " rounds (" + plural(today, "question") + ")" : plural(today, "question")) + ".</p>"
+        : "") +
       '</div><button class="btn" data-act="midgo">' +
-      (today ? "Do another round" : "Start today's review") +
+      (!today ? "Start today's review" : rounds > 1 && done < rounds ? "Start round " + (done + 1) + " of " + rounds : "Do another round") +
       "</button></section>";
   }
   h += '<h2 class="starth">Your units</h2><ul class="midtiles">';
@@ -319,10 +327,7 @@ function midSetup() {
           .join("") +
         "</div>" +
         (M.units.length ? "" : '<p class="hint">Pick at least one unit to go on.</p>'),
-      () =>
-        '<h2>How much time each day?</h2><div class="chips" role="group" aria-label="Minutes each day">' +
-        MID_MINS.map((m) => mchip("mins", m, m + " min", (M.mins || 30) === m)).join("") +
-        "</div>",
+      () => "<h2>How much time each day?</h2>" + minsSelectHTML("mid", M.mins || 30, "Each day") + '<p class="muted">Long days are split into rounds of up to 45 questions.</p>',
       () =>
         '<h2>How do you like to study?</h2><div class="mopts">' +
         [
@@ -350,9 +355,7 @@ function midSetup() {
             .join(", ") || "All",
         ) +
         "</span></li><li>Each day<span>" +
-        (M.mins || 30) +
-        " minutes, about " +
-        plural(midCount(), "question") +
+        esc(midDayText()) +
         "</span></li><li>Style<span>" +
         (M.style === "read" ? "Read first" : "Quiz me first") +
         "</span></li><li>Quick check<span>" +
@@ -372,6 +375,10 @@ function midSetup() {
   });
 }
 ACT.midsetup = () => midSetup();
+MINS_SET.mid = (m) => {
+  midState().mins = m;
+  save();
+};
 ACT.midset = (t) => {
   const M = midState(),
     k = t.dataset.k,

@@ -44,7 +44,7 @@ function startHTML() {
     '<button class="choice main" data-act="tnstart"><span class="ch">Test tomorrow?</span><span class="cd">' +
     (tonightOn
       ? "Tonight's session: round " + Math.min(T.cur + 1, T.rounds.length) + " of " + T.rounds.length + "."
-      : "About an hour tonight, in short rounds: read a few terms, answer them, and the ones you miss come back.") +
+      : "Pick how long you have, then go in short rounds: read a few terms, answer them, and the ones you miss come back.") +
     '</span><span class="cgo">' +
     (tonightOn ? "Continue tonight's session" : "Start tonight's session") +
     "</span></button>";

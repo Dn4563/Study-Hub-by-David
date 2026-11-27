@@ -135,3 +135,31 @@ function sure(title, text, yesLabel, yes) {
   }
   confirmBox(title, text, yesLabel, yes);
 }
+
+/* "How much time": one dropdown from 15 minutes to 5 hours instead of a few fixed buttons (Tonight's session,
+   Study plan, Midterm review). MINS_SET[key](minutes) saves a choice; the pop-up isn't redrawn, so keyboard focus
+   stays on the menu. */
+const MINS_OPTS = [15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 210, 240, 300];
+const minsLabel = (m) => {
+  const h = Math.floor(m / 60),
+    r = m % 60;
+  return h ? h + (h === 1 ? " hour" : " hours") + (r ? " " + r + " min" : "") : m + " min";
+};
+const MINS_SET = {};
+function minsSelectHTML(key, value, label) {
+  const opts = !value || MINS_OPTS.indexOf(value) >= 0 ? MINS_OPTS : MINS_OPTS.concat([value]).sort((a, b) => a - b);
+  return (
+    '<label class="minsel"><span>' +
+    esc(label || "Time") +
+    '</span><select data-mins="' +
+    esc(key) +
+    '">' +
+    opts.map((m) => '<option value="' + m + '"' + (m === value ? " selected" : "") + ">" + minsLabel(m) + "</option>").join("") +
+    "</select></label>"
+  );
+}
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (!t.matches || !t.matches("select[data-mins]") || !MINS_SET[t.dataset.mins]) return;
+  MINS_SET[t.dataset.mins](Number(t.value));
+});

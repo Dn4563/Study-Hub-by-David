@@ -40,6 +40,12 @@ for (const [w, h] of [[390, 844], [1280, 900]]) for (const scheme of ['light', '
     const hrefs = await page.$$eval(`.course[data-id="${c.id}"] .units a`, as => as.map(a => a.getAttribute('href')));
     check(hrefs.length === c.units.length, `${where}: ${c.id} shows ${hrefs.length} units, expected ${c.units.length}`);
     c.units.forEach((u, i) => check(hrefs[i] === (u.url || c.url), `${where}: ${c.id} ${u.label} links to ${hrefs[i]}`));
+    /* Extra links (like Phineas's kit) read as one sentence: the text around each link, then the link. */
+    for (const l of c.links || []) {
+      const note = await page.$eval(`.course[data-id="${c.id}"] .note`, (e) => ({ text: e.textContent, hrefs: [...e.querySelectorAll('a')].map((a) => a.getAttribute('href')) }));
+      check(note.hrefs.includes(l.url), `${where}: ${c.id} note links to ${l.url}`);
+      check(note.text.includes((l.before || '') + l.label + (l.after || '')), `${where}: ${c.id} note reads "${(l.before || '') + l.label + (l.after || '')}"`);
+    }
   }
   const tabsOut = await page.$$eval('.course', els => els.filter(e => {
     const t = e.querySelector('.tab').getBoundingClientRect(), s = e.querySelector('.sheet').getBoundingClientRect();

@@ -8,7 +8,6 @@
       already set up; a bar under the tabs shows the current step on every screen; steps finish on their own
       when the lesson, quiz, flashcard round or practice section is done. Steps can be reordered, removed and
       restored, and the route ends with a re-check that shows before and after. Saved in SAVE.plan. */
-const PL_MINS = [15, 30, 60, 90];
 const PL_RATE = [
   ["know", "I know it well", "I know it"],
   ["shaky", "It's shaky", "Shaky"],
@@ -59,7 +58,16 @@ function daysLeft() {
     t = new Date(p[0], p[1] - 1, p[2]);
   return Math.max(0, Math.round((t - today0()) / DAY));
 }
-const studyDays = () => Math.max(1, Math.min(14, daysLeft()));
+/* How many days the route covers: the student's choice (P.days) or every day until the test, at most 14.
+   With no test date the default is a week, and up to 14 days can be chosen. */
+const noDate = () => planState().nodate || !planState().date;
+const dayLimit = () => (noDate() ? 14 : Math.max(1, Math.min(14, daysLeft())));
+const daysDefault = () => (noDate() ? 7 : dayLimit());
+const studyDays = () => Math.max(1, Math.min(dayLimit(), planState().days || daysDefault()));
+function daysHint(n) {
+  const end = new Date(today0().getTime() + (n - 1) * DAY);
+  return n === 1 ? "Just today: everything goes in one day." : "Starts today and runs " + n + " days in a row, ending " + dayName(end) + ". The mock test and re-check go on the last day.";
+}
 function dateLine() {
   const P = planState(),
     n = daysLeft();
@@ -68,7 +76,10 @@ function dateLine() {
     t = new Date(p[0], p[1] - 1, p[2]);
   return n === 0 ? "Your test is today" : n === 1 ? "Your test is tomorrow (" + dayName(t) + ")" : "Your test is in " + n + " days (" + dayName(t) + ")";
 }
-const budget = () => (planState().mins >= 90 ? 120 : planState().mins || 30);
+/* Minutes a day. Plans made before the dropdown (Nov 27) had a "90+" button that meant 2 hours. */
+const oldPlus = () => planState().mins === 90 && !planState().minsExact;
+const budget = () => (oldPlus() ? 120 : planState().mins || 30);
+const minsText = () => (oldPlus() ? "90+ min" : minsLabel(planState().mins || 30));
 
 /* ---------- what each section needs ---------- */
 function secHistory(s) {
@@ -422,10 +433,19 @@ function planWizard() {
         pchip("nodate", "1", "Not sure yet", P.nodate) +
         "</div>" +
         (P.date || P.nodate ? '<p class="hint">' + esc(dateLine()) + ".</p>" : ""),
-      () =>
-        '<h2>How much time can you study each day?</h2><div class="chips" role="group" aria-label="Minutes each day">' +
-        PL_MINS.map((m) => pchip("mins", m, m === 90 ? "90+ min" : m + " min", P.mins === m)).join("") +
-        "</div>",
+      () => {
+        const n = Math.min(dayLimit(), P.days || daysDefault());
+        let o = "";
+        for (let i = 1; i <= dayLimit(); i++) o += '<option value="' + i + '"' + (i === n ? " selected" : "") + ">" + plural(i, "day") + "</option>";
+        return (
+          '<h2>How many days do you want to study?</h2><label class="minsel"><span>Days</span><select data-pdays>' +
+          o +
+          '</select></label><p class="hint" id="pdayshint">' +
+          esc(daysHint(n)) +
+          "</p>"
+        );
+      },
+      () => "<h2>How much time can you study each day?</h2>" + minsSelectHTML("plan", P.mins || 30, "Each day"),
       () =>
         '<h2>How do you like to study?</h2><div class="mopts">' +
         [
@@ -462,8 +482,8 @@ function planWizard() {
         const sg = focusSuggest();
         return (
           '<h2>Focus timer?</h2><p class="muted">Work, then a short break. Suggested for ' +
-          (P.mins || 30) +
-          " minutes a day: <b>" +
+          esc(minsText()) +
+          " a day: <b>" +
           sg[0] +
           " + " +
           sg[1] +
@@ -477,8 +497,10 @@ function planWizard() {
       () =>
         '<h2>Your plan</h2><ul class="msum"><li>Test<span>' +
         esc(P.date || P.nodate ? dateLine() : "Not set (counts as a week)") +
+        "</span></li><li>Days<span>" +
+        esc(plural(studyDays(), "day") + ", starting today") +
         "</span></li><li>Each day<span>" +
-        (P.mins ? (P.mins === 90 ? "90+" : P.mins) + " minutes" : "30 minutes") +
+        esc(minsText()) +
         "</span></li><li>Style<span>" +
         (P.style === "quiz" ? "Quiz me first" : "Read first") +
         "</span></li><li>Decks rated<span>" +
@@ -494,6 +516,8 @@ function planWizard() {
     onDone: () => {
       if (!P.date && !P.nodate) P.nodate = true;
       if (!P.mins) P.mins = 30;
+      P.minsExact = true;
+      if (!P.days) P.days = studyDays();
       ds.forEach((d) => {
         if (!P.rate[d.id] && !planSecs().filter((s) => s.d.id === d.id).every((s) => P.rateSec[s.id])) P.rate[d.id] = "shaky";
       });
@@ -600,7 +624,7 @@ function planMapHTML() {
     steps = activeSteps(),
     finished = steps.filter(stepDone),
     cur = currentStep();
-  let h = '<section class="panel plan"><div class="rtop"><h2>Your study route</h2><span class="muted">' + esc(dateLine()) + ", " + (P.mins >= 90 ? "90+" : P.mins) + " minutes a day</span></div>";
+  let h = '<section class="panel plan"><div class="rtop"><h2>Your study route</h2><span class="muted">' + esc(dateLine()) + ". Plan: " + esc(plural(studyDays(), "day") + ", " + minsText() + " a day") + "</span></div>";
   h +=
     '<div class="qnav">' +
     (cur ? '<button class="btn" data-act="plgo" data-k="' + esc(cur.key) + '">' + (finished.length ? "Continue my route" : "Start my route") + "</button>" : "") +
@@ -627,7 +651,7 @@ function planMapHTML() {
     const dt = new Date(today0().getTime() + day.i * DAY);
     h += '<div class="plday"><h4>' + (day.i === 0 ? "Today" : "Day " + (day.i + 1)) + ", " + esc(dayName(dt)) + '<span class="muted"> (about ' + day.min + " min)</span></h4>";
     if (day.min > budget() + 10)
-      h += '<p class="hint plover">That\'s more than your ' + (P.mins >= 90 ? "90+" : P.mins) + " minutes. Choose more time each day (Change my answers), or remove a step you can skip.</p>";
+      h += '<p class="hint plover">That\'s more than your ' + esc(minsText()) + ". Choose more time each day (Change my answers), or remove a step you can skip.</p>";
     h += '<ol class="plsteps">';
     day.steps.forEach((st) => (h += stepHTML(st, stepNo(st))));
     h += "</ol></div>";
@@ -706,6 +730,20 @@ ACT.plset = (t) => {
   save();
   render();
 };
+MINS_SET.plan = (m) => {
+  const P = planState();
+  P.mins = m;
+  P.minsExact = true;
+  save();
+};
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (!t || !t.matches || !t.matches("select[data-pdays]")) return;
+  planState().days = Number(t.value);
+  save();
+  const h = document.getElementById("pdayshint");
+  if (h) h.textContent = daysHint(studyDays());
+});
 document.addEventListener("change", (e) => {
   const t = e.target;
   if (!t || !t.dataset || t.dataset.plan !== "date") return;
