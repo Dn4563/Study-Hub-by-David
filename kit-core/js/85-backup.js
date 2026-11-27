@@ -29,7 +29,7 @@ function restoreData(o) {
 /* Every card in a unit, optional decks included, keyed by term. */
 function termIds(u) {
   const out = {};
-  UNITDATA[u.id].decks.forEach((dk) => dk.sections.forEach((sc, si) => sc.cards.forEach((c, ci) => (out[c.term] = dk.id + "." + si + "." + ci))));
+  UNITDATA[u.id].decks.forEach((dk) => dk.sections.forEach((sc, si) => sc.cards.forEach((c, ci) => (out[c.term] = c.id0 || dk.id + "." + si + "." + ci))));
   return out;
 }
 function importForeign(o) {

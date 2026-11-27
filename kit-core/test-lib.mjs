@@ -130,6 +130,22 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     }
     assertNoErrors(unit + " tabs");
 
+    // 2a. Decks split by groups.json: card ids and section keys are the ones from before the split, so saved
+    //     progress still matches; ids stay unique; notes, chains and scenarios point at decks that exist.
+    const grp = P.w.eval(
+      "(() => { const split = D.allDecks.filter((d) => d.from !== undefined); if (!split.length) return null;" +
+        " const ids = ALL.map((c) => c.id), dk = new Set(D.allDecks.map((d) => d.id));" +
+        " return { n: split.length, kept: split.every((d) => d.sections.every((s) => s.key0 && s.cards.every((c) => c.id0 && c.id === c.id0 && c.sec === s.key0)))," +
+        " unique: new Set(ids).size === ids.length, linked: D.watch.concat(D.flows, D.sq).every((x) => dk.has(x.deck))," +
+        " lessons: LESSONS.every((l) => /^[^.]+\\.\\d+\\.\\d+$/.test(l.id)) }; })()",
+    );
+    if (grp) {
+      ok(grp.kept, "split decks keep their old card ids and section keys");
+      ok(grp.unique, "card ids are unique after the split");
+      ok(grp.linked, "watch-out notes, chains and scenarios point at decks that exist");
+      ok(grp.lessons, "lesson ids keep the old deck.section.part form");
+    }
+
     // 2b. Free-response unit (fr.json): its own page with Practice and a timed Mock exam. Checks the AAQ / EBQ
     // checker on the kit's model answers, Next, the confirm on Clear, the mock draw (1 AAQ + 1 EBQ), time options,
     // the countdown, Hide / Show, the 5-minute warning, time-up submit, and Gemini (fake reply, no network).

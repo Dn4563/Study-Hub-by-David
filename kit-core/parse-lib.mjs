@@ -79,6 +79,92 @@ export function parseTrees(md) {
 
 const readIf = (dir, f, fallback) => (existsSync(join(dir, f)) ? readFileSync(join(dir, f), "utf8") : fallback);
 
+/* groups.json (optional, ours): splits a big deck into smaller ones along its section lines, without touching card wording.
+     { "2": [ { "name": "Research Methods: Studies & Correlation", "intro": "...", "sections": ["Why psychology needs research", ...] },
+              { "id": "2b", "name": "Research Methods: Experiments & Ethics", "sections": ["Experiments", ...] } ] }
+   The key is the original deck id. The first group keeps that id unless it names another; every section must be listed once,
+   so a re-import that renames a section stops the build instead of losing cards. Each card keeps the id it had before
+   (id0) and each section its key (key0), so saved progress, finished lessons and study plans still match. Watch-out notes,
+   chains and scenarios tied to the old deck go to the new deck whose terms they mention most (ties: the first group);
+   "pin": ["SQ3", "F2-1", "Informed consent comes"] in a group sends a scenario, chain or note (by id or opening words) there. */
+const normT = (t) =>
+  " " +
+  String(t)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim() +
+  " ";
+function termKeys(c) {
+  const t = c.term.toLowerCase();
+  return [t, t.replace(/\s*\(.*\)\s*/g, " ").trim(), ...t.split(/\s*[/,]\s*/)].map(normT).filter((k) => k.trim().length > 2);
+}
+function groupScore(g, text, answer) {
+  const T = normT(text),
+    A = answer ? normT(answer) : "";
+  let n = 0;
+  g.cards.forEach((c) =>
+    [...new Set(termKeys(c))].forEach((k) => {
+      if (A && (A.includes(k) || k.includes(A))) n += 5;
+      if (T.includes(k)) n++;
+    }),
+  );
+  return n;
+}
+export function applyGroups(data, groups, log = () => {}) {
+  for (const [key, list] of Object.entries(groups)) {
+    const di = data.decks.findIndex((d) => String(d.id) === key);
+    if (di < 0) throw new Error(`groups.json: no deck ${key}`);
+    const old = data.decks[di],
+      used = new Set();
+    old.sections.forEach((sc, si) => {
+      sc.key0 = old.id + "." + si;
+      sc.cards.forEach((c, ci) => (c.id0 = old.id + "." + si + "." + ci));
+    });
+    const made = list.map((g, gi) => {
+      if (!g.name || !Array.isArray(g.sections) || !g.sections.length) throw new Error(`groups.json: deck ${key} group ${gi + 1} needs a name and sections`);
+      const sections = g.sections.map((n) => {
+        const sc = old.sections.find((s) => s.name === n);
+        if (!sc) throw new Error(`groups.json: deck ${key} has no section "${n}"`);
+        if (used.has(n)) throw new Error(`groups.json: section "${n}" is listed twice`);
+        used.add(n);
+        return sc;
+      });
+      const id = g.id !== undefined ? g.id : gi ? old.id + String.fromCharCode(97 + gi) : old.id;
+      const d = { id, name: g.name, optional: old.optional, sections, from: old.id };
+      if (g.intro) d.intro = [g.intro];
+      else if (!gi && old.intro) d.intro = old.intro;
+      return { d, pin: g.pin || [], cards: sections.flatMap((s) => s.cards) };
+    });
+    const left = old.sections.filter((s) => !used.has(s.name)).map((s) => s.name);
+    if (left.length) throw new Error(`groups.json: deck ${key} sections not placed in any group: ${left.join(", ")}`);
+    const ids = new Set(data.decks.filter((d) => d !== old).map((d) => String(d.id)));
+    made.forEach((m) => {
+      if (ids.has(String(m.d.id))) throw new Error(`groups.json: deck id ${m.d.id} is already used`);
+      ids.add(String(m.d.id));
+    });
+    data.decks.splice(di, 1, ...made.map((m) => m.d));
+    /* Move what was tied to the old deck. */
+    const place = (item, tag, text, answer) => {
+      let best = made.find((m) => m.pin.some((p) => p === item.id || (text && text.startsWith(p))));
+      if (!best) {
+        const sc = made.map((m) => groupScore(m, text, answer));
+        best = made[sc.indexOf(Math.max(...sc))];
+      }
+      log(`  ${tag} -> ${best.d.name}`);
+      item.deck = best.d.id;
+    };
+    data.watch.filter((w) => String(w.deck) === key).forEach((w) => place(w, "watch: " + w.text.slice(0, 50), w.text));
+    data.flows.filter((f) => String(f.deck) === key).forEach((f) => place(f, "chain " + f.id, f.title + " " + (f.steps || []).join(" ")));
+    data.sq
+      .filter((s) => String(s.deck) === key)
+      .forEach((s) => {
+        const ans = Array.isArray(s.opts) && typeof s.ans === "number" ? s.opts[s.ans] : String(s.ans || "");
+        place(s, "scenario " + s.id, s.q + " " + (s.exp || ""), ans);
+      });
+    if (data.topicDeck) for (const t in data.topicDeck) if (String(data.topicDeck[t]) === key) data.topicDeck[t] = made[0].d.id;
+  }
+}
+
 export function parseUnit(dir) {
   const guide = JSON.parse(readIf(dir, "guide.json", "{}"));
   const data = {
@@ -119,6 +205,7 @@ export function parseUnit(dir) {
   }
   if (guide.cheat) data.cheat = guide.cheat;
   if (guide.topicDeck) data.topicDeck = guide.topicDeck;
+  if (existsSync(join(dir, "groups.json"))) applyGroups(data, JSON.parse(readIf(dir, "groups.json", "{}")), (l) => process.env.GROUPS_LOG && console.log(l));
   return data;
 }
 

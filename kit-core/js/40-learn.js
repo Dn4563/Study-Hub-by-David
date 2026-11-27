@@ -259,7 +259,7 @@ function unitCards(u) {
   const out = [];
   UNITDATA[u.id].decks.forEach((dk) => {
     if (dk.optional) return;
-    dk.sections.forEach((sc, si) => sc.cards.forEach((c, ci) => out.push(Object.assign({}, c, { id: dk.id + "." + si + "." + ci, deck: dk.id, sec: dk.id + "." + si }))));
+    dk.sections.forEach((sc, si) => sc.cards.forEach((c, ci) => out.push(Object.assign({}, c, { id: c.id0 || dk.id + "." + si + "." + ci, deck: dk.id, sec: sc.key0 || dk.id + "." + si }))));
   });
   return out;
 }

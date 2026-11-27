@@ -23,6 +23,11 @@ const PL_MAXQ = 20,
 
 function planState() {
   if (!SAVE.plan || SAVE.plan.v !== 2) SAVE.plan = { v: 2, date: null, nodate: false, mins: null, rate: {}, rateSec: {}, check: {}, route: null, done: {}, recheck: null, on: false, phase: "about" };
+  /* A deck split by groups.json starts with the rating its old deck had. */
+  const R = SAVE.plan.rate;
+  (D.allDecks || D.decks || []).forEach((d) => {
+    if (d.from !== undefined && d.from !== d.id && R[d.id] === undefined && R[d.from] !== undefined) R[d.id] = R[d.from];
+  });
   return SAVE.plan;
 }
 const planDecks = () => D.decks.filter((d) => ALL.some((c) => c.deck === d.id));
