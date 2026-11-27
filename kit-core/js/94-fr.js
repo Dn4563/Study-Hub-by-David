@@ -293,7 +293,8 @@ function frPracticeHTML() {
     '<button class="btn sec frnext" data-act="frnext">Next ' +
     (kind === "ebq" ? "prompt" : "article") +
     ICON.chev +
-    "</button></div>";
+    "</button></div>" +
+    (gemOn ? "" : gemAskHTML());
   h +=
     '<div class="frfoot">' +
     (gemOn ? '<button class="btn ghost" data-act="frgen"' + (FR.gen ? " disabled" : "") + ">" + (FR.gen ? "Generating, about 20 seconds" : "Generate a new one with Gemini") + "</button>" : "") +
@@ -582,6 +583,7 @@ ACT.frgem = async (t) => {
   } catch (e) {
     s.ai = null;
     s.aiErr = e.message || String(e);
+    gemFail(e);
   }
   s.auto = frqGrade(q, q.source, s.ans);
   s.pm = {};

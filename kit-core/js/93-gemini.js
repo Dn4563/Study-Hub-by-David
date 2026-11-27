@@ -101,6 +101,7 @@ async function gemGradeCur() {
   } catch (e) {
     s.ai = null;
     s.aiErr = e.message || String(e);
+    gemFail(e);
   }
   s.auto = frqGrade(c.q, src, s.ans);
   s.pm = {};
@@ -240,13 +241,15 @@ ACT.gemgen = async () => {
 };
 
 /* ---------- Settings box ---------- */
+/* The key box: in Settings in every kit (the key works on every kit on this site), and in the "Set up" pop-up. */
 function gemCardHTML() {
-  if (!hasFrq()) return "";
   const G = gemGet(),
     m = UI.gemMsg || "";
   return (
     '<h3>Gemini AI grading (optional)</h3><div class="gemcard">' +
-    "<p>Without this, every AAQ and EBQ is graded by the built-in checklist grader. With a free Gemini key, you can also have answers graded like an AP reader would, and generate unlimited new articles and prompts.</p>" +
+    (hasFrq()
+      ? "<p>Without this, every AAQ and EBQ is graded by the built-in checklist grader. With a free Gemini key, you can also have answers graded like an AP reader would, and generate unlimited new articles and prompts.</p>"
+      : "<p>Without this, written answers are checked by the built-in checker or by you, with the model answer. With a free Gemini key, written answers can also be graded like a teacher would. One key works on every kit on this site.</p>") +
     (G.key ? "<p><b>A key is saved in this browser</b> (it ends in …" + esc(G.key.slice(-4)) + ").</p>" : "") +
     '<h4>How to get a free key</h4><ol class="gemsteps">' +
     '<li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> and sign in with a Google account.</li>' +
@@ -293,9 +296,93 @@ ACT.gemtest = async () => {
   render();
   try {
     const r = await gemini('Reply with JSON only: {"ok":true}');
-    UI.gemMsg = r && r.ok ? "It works. Grade with Gemini now appears on every AAQ and EBQ." : "Gemini answered, but not as expected. Try again.";
+    UI.gemMsg = r && r.ok ? "It works. Grade with Gemini now appears on written questions in every kit." : "Gemini answered, but not as expected. Try again.";
   } catch (e) {
     UI.gemMsg = "That didn't work: " + (e.message || e) + " Check that you copied the whole key.";
   }
   render();
 };
+
+/* ---------- Gemini for every written question (not only AAQ / EBQ) ---------- */
+async function gemGradeWritten(q, s) {
+  const parts = q.parts
+    .map((p) => "(" + p.k + ") " + p.prompt + "\n  MODEL ANSWER: " + p.model + (p.earns ? "\n  EARNS THE POINT IF: " + p.earns : "") + "\n  STUDENT ANSWER: " + ((q.type === "saq" ? s.ans[p.k] : s.ans[p.k] || "") || "").trim())
+    .join("\n\n");
+  const extra = q.type === "saq" ? "" : "\n\nSTUDENT'S WORK AREA AND ANSWER BOX (answers for all parts may be here):\n" + [s.work || "", s.abox || ""].join("\n").trim();
+  const prompt =
+    "You are grading a high school student's written answer for practice, fairly like a teacher would. Each part is worth 1 point. Give the point when the answer is correct and specific, even if it's worded differently from the model answer. Ignore spelling. Don't give the point for vague, wrong or missing answers." +
+    (q.stem ? "\n\nQUESTION: " + q.stem : "") +
+    (q.lead ? "\n" + q.lead : "") +
+    (q.data && q.data.length ? "\nDATA: " + q.data.join(" | ") : "") +
+    "\n\nPARTS:\n" +
+    parts +
+    extra +
+    '\n\nRespond with JSON only: {"parts":{' +
+    q.parts.map((p) => '"' + p.k + '":{"points":0,"why":"one sentence to the student about what earned or missed the point"}').join(",") +
+    '},"overall":"one short sentence of advice"}';
+  const res = await gemini(prompt),
+    out = { parts: {}, overall: res.overall ? String(res.overall) : "" };
+  q.parts.forEach((p) => {
+    const g = (res.parts || {})[p.k] || {};
+    out.parts[p.k] = { points: Number(g.points) >= 1 ? 1 : 0, why: g.why ? String(g.why) : "" };
+  });
+  return out;
+}
+ACT.gemw = async () => {
+  const c = cur3();
+  if (!c.q || !isWritten(c.q) || c.s.aiwLoading) return;
+  const s = c.s;
+  s.aiwLoading = true;
+  s.aiwErr = "";
+  render();
+  try {
+    s.aiw = await gemGradeWritten(c.q, s);
+    c.q.parts.forEach((p) => (s.pm[p.k] = s.aiw.parts[p.k].points === 1));
+  } catch (e) {
+    s.aiwErr = e.message || String(e);
+    gemFail(e);
+  }
+  s.aiwLoading = false;
+  syncMain();
+  PTsave();
+  render();
+};
+window.ACT_gemwForTest = () => ACT.gemw();
+
+/* First time a student reaches a written question without a key: a small card. "Not now" hides it for 3 days,
+   "Don't ask again" for good (both remembered for the whole site). */
+const GEMASK = "sk:gemini-ask";
+function gemAskHTML() {
+  if (gemKey()) return "";
+  const a = readJSON(GEMASK);
+  if (a && (a.never || (a.until && a.until > Date.now()))) return "";
+  return (
+    '<div class="gemask" role="note"><b>Get free AI grading for written answers</b><p>Add a free Gemini key once. It works on every kit on this site, and the built-in checker always works without it.</p>' +
+    '<div class="qnav"><button class="btn small" data-act="gemsetup">Set up (about 2 minutes)</button><button class="btn sec small" data-act="gemlater">Not now</button><button class="btn ghost small" data-act="gemnever">Don\'t ask again</button></div></div>'
+  );
+}
+ACT.gemsetup = () => {
+  if (MODAL.o) closeModal(true);
+  UI.gemMsg = "";
+  openModal({ title: "Gemini AI grading", wide: true, body: () => gemCardHTML() + '<div class="mfoot"><span></span><button class="btn" data-act="mclose">Done</button></div>' });
+};
+ACT.gemlater = () => {
+  writeJSON(GEMASK, { until: Date.now() + 3 * 86400000 });
+  render();
+};
+ACT.gemnever = () => {
+  writeJSON(GEMASK, { never: true });
+  render();
+};
+/* A saved key that stops working (wrong key, turned off, over the free limit): say so and offer to fix it. */
+function gemFail(e) {
+  const m = String((e && e.message) || e || "");
+  if (!/api key|api_key|permission|denied|quota|exhausted|limit|invalid|401|403|429/i.test(m)) return;
+  openModal({
+    title: "Gemini key problem",
+    body: () =>
+      "<h2>Your Gemini key isn't working</h2><p>Google said: " +
+      esc(m) +
+      '</p><p>Your answer was checked with the built-in checker instead (or mark it yourself with the model answer). If you hit the free daily limit, it works again tomorrow.</p><div class="mfoot"><button class="btn sec" data-act="mclose">Use the checker for now</button><button class="btn" data-act="gemsetup">Update my key</button></div>',
+  });
+}

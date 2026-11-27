@@ -39,7 +39,11 @@ const UNIT = (() => {
   return COURSE.units.find((u) => u.id === id) || null;
 })();
 const D = UNIT ? UNITDATA[UNIT.id] : null;
-addEventListener("hashchange", () => location.reload());
+/* Moving between units reloads the page; the focus timer's "leave this page?" check skips this case. */
+addEventListener("hashchange", () => {
+  window.__navOK = true;
+  location.reload();
+});
 
 /* Saved progress is namespaced per course and unit, so kits on the same github.io site never overwrite each other. */
 const keyOf = (u, part) => "sk:" + COURSE.id + ":" + u.id + ":" + part;
@@ -58,6 +62,7 @@ COURSE.units.forEach((u) => {
   });
 });
 const LSK = UNIT ? keyOf(UNIT, "kit") : null;
+const LASTK = "sk:" + COURSE.id + ":last";
 const PTK = UNIT ? keyOf(UNIT, "pt") : null;
 const readJSON = (k) => {
   try {

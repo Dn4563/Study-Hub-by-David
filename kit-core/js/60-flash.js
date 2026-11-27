@@ -55,11 +55,11 @@ function fcCardHTML(c) {
   const showTerm = SAVE.settings.fcFirst === "term" ? !FC.flip : FC.flip,
     starred = !!SAVE.star[c.id];
   return (
-    '<div class="fctools"><button class="btn sec small" data-act="fcstar" aria-pressed="' +
+    '<div class="fctools"><button class="btn ghost small" data-act="fcstar" aria-pressed="' +
     starred +
     '">' +
     (starred ? "★ Starred" : "☆ Star") +
-    '</button><button class="btn sec small" data-act="fcswap">⇄ Swap sides</button><button class="btn sec small" data-act="fcshuf">Shuffle</button><button class="btn sec small" data-act="fcagain">Restart</button></div>' +
+    "</button></div>" +
     '<button class="fcard" data-act="fcflip" aria-label="Flip card">' +
     (showTerm ? '<span class="fterm">' + esc(c.term) + "</span>" : '<span class="fdef">' + esc(c.def) + "</span>" + hookLine(c)) +
     "<small>Tap or press Space to flip</small></button>"
@@ -67,7 +67,8 @@ function fcCardHTML(c) {
 }
 function fcHTML() {
   if (!FC) fcBuild();
-  let h = '<div class="ctl">' + FC_CTL() + "</div>";
+  /* Mode, pool, order, which side first, swap, shuffle and restart live in the Options pop-up (fcOptsBtn). */
+  let h = "";
   const empty =
     '<section class="panel"><p class="big">Nothing in this pool.</p><p class="muted">' +
     (SAVE.settings.fcPool === "starred" ? "Star cards with the ☆ button, or switch the pool to All." : "Switch the pool to All to review everything, or pick another deck.") +
@@ -114,15 +115,11 @@ function fcHTML() {
   }
   const done = FC.total - FC.q.length;
   h +=
-    '<div class="fcprog"><span class="muted">' +
-    done +
-    " of " +
-    FC.total +
-    " sorted: you know " +
+    '<div class="fcprog"><span class="muted">Know it: ' +
     FC.got.length +
-    ", still learning " +
+    ". Still learning: " +
     FC.learning.length +
-    '</span><span class="bar" aria-hidden="true"><i style="width:' +
+    '.</span><span class="bar" aria-hidden="true"><i style="width:' +
     Math.round((100 * done) / FC.total) +
     '%"></i></span></div>' +
     fcCardHTML(BYID[FC.q[0]]) +
@@ -238,3 +235,14 @@ document.addEventListener("keydown", (e) => {
   else if (!browse && e.key === "1") ACT.fcnot();
   else if (!browse && e.key === "2") ACT.fcgot();
 });
+
+/* Options pop-up: the settings that used to sit above every card. */
+const fcOptsBtn = () => '<button class="btn sec small" data-act="fcopts">Options</button>';
+ACT.fcopts = () =>
+  openModal({
+    title: "Flashcard options",
+    body: () =>
+      '<h2>Flashcard options</h2><div class="ctl mctl">' +
+      FC_CTL() +
+      '</div><div class="qnav"><button class="btn sec small" data-act="fcswap">Swap sides</button><button class="btn sec small" data-act="fcshuf">Shuffle</button><button class="btn sec small" data-act="fcagain">Start over</button></div><div class="mfoot"><span class="muted">Saved for next time.</span><button class="btn" data-act="mclose">Done</button></div>',
+  });

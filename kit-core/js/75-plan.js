@@ -10,9 +10,9 @@
       restored, and the route ends with a re-check that shows before and after. Saved in SAVE.plan. */
 const PL_MINS = [15, 30, 60, 90];
 const PL_RATE = [
-  ["know", "I know it well"],
-  ["shaky", "It's shaky"],
-  ["new", "I haven't learned it"],
+  ["know", "I know it well", "I know it"],
+  ["shaky", "It's shaky", "Shaky"],
+  ["new", "I haven't learned it", "New to me"],
 ];
 const PL_LABEL = { learn: "Learn", fix: "Fix", polish: "Polish" };
 /* "Sections: A, B." without doubling a section name's own question mark. */
@@ -30,7 +30,7 @@ function planSecs() {
   const out = [];
   planDecks().forEach((d) =>
     d.sections.forEach((sc, si) => {
-      if (sc.cards.length) out.push({ id: d.id + "." + si, d: d, sc: sc, name: sc.name, cards: sc.cards });
+      if (sc.cards.length) out.push({ id: sc.key0 || d.id + "." + si, d: d, sc: sc, name: sc.name, cards: sc.cards });
     }),
   );
   return out;
@@ -373,61 +373,148 @@ function planHTML() {
   return planMapHTML();
 }
 const pchip = (k, v, label, on) => '<button class="chip" data-act="plset" data-k="' + esc(k) + '" data-v="' + esc(v) + '" aria-pressed="' + !!on + '">' + esc(label) + "</button>";
+/* Setup is a step-by-step pop-up (planWizard); this page only offers it, or shows the route once there is one. */
 function planAboutHTML() {
+  const P = planState();
+  return (
+    '<section class="panel plan"><h2>I have a few days</h2><p class="lead">Answer a few quick questions (about a minute) and get a plan spread over the days before your test, with a little each day. Each step opens the right tool for you.</p>' +
+    '<div class="qnav"><button class="btn" data-act="plwiz">' +
+    (P.route ? "Change my answers" : "Make my plan") +
+    "</button>" +
+    (P.route ? '<button class="btn sec" data-act="plback">Back to my route</button>' : "") +
+    "</div></section>"
+  );
+}
+/* The test date shown in the unit header: "Test on Thu, Dec 3" until the day (from the Study plan). */
+function planTestLabel() {
+  const P = SAVE && SAVE.plan;
+  if (!P || P.nodate || !P.date) return "";
+  const n = daysLeft();
+  if (n < 0) return "";
+  const p = P.date.split("-").map(Number),
+    t = new Date(p[0], p[1] - 1, p[2]);
+  if (t < today0()) return "";
+  return n === 0 ? "Test today" : n === 1 ? "Test tomorrow" : "Test on " + t.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+function planWizard() {
   const P = planState(),
     ds = planDecks();
-  const rated = (d) => P.rate[d.id] || planSecs().filter((s) => s.d.id === d.id).every((s) => P.rateSec[s.id]);
-  const ready = (P.date || P.nodate) && P.mins && ds.every(rated),
-    nq = checkSecs().length;
-  let h = '<section class="panel plan"><h2>Study plan</h2><p class="lead">Tell it when your test is and how you feel about each part. A short quick check and your saved progress fill in the rest, and you get a step-by-step route that takes you to each thing in order.</p>';
-  h +=
-    '<div class="plq"><h3>When is your test?</h3><div class="pldate"><input type="date" data-plan="date" min="' +
-    isoDay(today0()) +
-    '" value="' +
-    esc(P.date || "") +
-    '" aria-label="Test date">' +
-    pchip("today", "1", "It's today", P.date === isoDay(today0()) && !P.nodate) +
-    pchip("nodate", "1", "No date yet", P.nodate) +
-    "</div>" +
-    (P.date || P.nodate ? '<p class="hint">' + esc(dateLine()) + ".</p>" : "") +
-    "</div>";
-  h += '<div class="plq"><h3>How much time can you study each day?</h3><div class="chips" role="group" aria-label="Minutes each day">' + PL_MINS.map((m) => pchip("mins", m, m === 90 ? "90+ min" : m + " min", P.mins === m)).join("") + "</div></div>";
-  h += '<div class="plq"><h3>How well do you know each part?</h3><p class="hint">Be honest. The quick check and your saved progress count too, so one guess either way won\'t decide anything. Open a deck to rate its sections one by one.</p><div class="plrate">';
-  ds.forEach((d) => {
-    const secs = planSecs().filter((s) => s.d.id === d.id),
-      open = UI.planOpen && UI.planOpen[d.id];
-    h +=
-      '<div class="plrow"><span class="pld">' +
-      dot(d.id) +
-      esc(d.name) +
-      '</span><span class="chips" role="group" aria-label="' +
-      esc(d.name) +
-      '">' +
-      PL_RATE.map((r) => pchip("r:" + d.id, r[0], r[1], P.rate[d.id] === r[0])).join("") +
-      '</span><button class="lnk plopen" data-act="plopen" data-d="' +
-      esc(d.id) +
-      '" aria-expanded="' +
-      !!open +
-      '">' +
-      (open ? "Hide sections" : "Rate sections") +
-      "</button></div>";
-    if (open)
-      secs.forEach((s) => {
-        h += '<div class="plrow sub"><span class="pld">' + esc(s.name) + '</span><span class="chips" role="group" aria-label="' + esc(s.name) + '">' + PL_RATE.map((r) => pchip("s:" + s.id, r[0], r[1], secRate(s) === r[0])).join("") + '</span><span class="plopen" aria-hidden="true"></span></div>';
+  if (P.style === undefined) P.style = "read";
+  if (P.wcheck === undefined) P.wcheck = true;
+  UI.planEdit = false;
+  openModal({
+    title: "Study plan",
+    done: "Make my plan",
+    steps: [
+      () =>
+        '<h2>When is your test?</h2><div class="pldate"><input type="date" data-plan="date" min="' +
+        isoDay(today0()) +
+        '" value="' +
+        esc(P.date || "") +
+        '" aria-label="Test date"></div><div class="chips">' +
+        pchip("tomorrow", "1", "Tomorrow", P.date === isoDay(new Date(today0().getTime() + DAY)) && !P.nodate) +
+        pchip("today", "1", "It's today", P.date === isoDay(today0()) && !P.nodate) +
+        pchip("nodate", "1", "Not sure yet", P.nodate) +
+        "</div>" +
+        (P.date || P.nodate ? '<p class="hint">' + esc(dateLine()) + ".</p>" : ""),
+      () =>
+        '<h2>How much time can you study each day?</h2><div class="chips" role="group" aria-label="Minutes each day">' +
+        PL_MINS.map((m) => pchip("mins", m, m === 90 ? "90+ min" : m + " min", P.mins === m)).join("") +
+        "</div>",
+      () =>
+        '<h2>How do you like to study?</h2><div class="mopts">' +
+        [
+          ["read", "Read first", "See a few terms, then answer questions on them."],
+          ["quiz", "Quiz me first", "Try the questions first, then see the answers."],
+        ]
+          .map((o) => '<button data-act="plset" data-k="style" data-v="' + o[0] + '" aria-pressed="' + (P.style === o[0]) + '"><b>' + o[1] + "</b><span>" + o[2] + "</span></button>")
+          .join("") +
+        "</div>",
+      () =>
+        '<h2>How well do you know each part?</h2><p class="muted">One tap per deck, or skip this step: anything you skip counts as shaky.</p><div class="plrate">' +
+        ds
+          .map(
+            (d) =>
+              '<div class="plrow"><span class="pld">' +
+              dot(d.id) +
+              esc(d.name) +
+              '</span><span class="chips" role="group" aria-label="' +
+              esc(d.name) +
+              '">' +
+              PL_RATE.map((r) => pchip("r:" + d.id, r[0], r[2] || r[1], P.rate[d.id] === r[0])).join("") +
+              "</span></div>",
+          )
+          .join("") +
+        "</div>",
+      () =>
+        '<h2>Find your weak spots?</h2><p>A short quick check: one question per section (' +
+        plural(checkSecs().length, "question") +
+        '). It makes the plan fit you better.</p><div class="chips">' +
+        pchip("wcheck", "1", "Yes, do the quick check", P.wcheck) +
+        pchip("wcheck", "0", "Skip it", !P.wcheck) +
+        "</div>",
+      () => {
+        const sg = focusSuggest();
+        return (
+          '<h2>Focus timer?</h2><p class="muted">Work, then a short break. Suggested for ' +
+          (P.mins || 30) +
+          " minutes a day: <b>" +
+          sg[0] +
+          " + " +
+          sg[1] +
+          '</b>. You can turn it on or off any time from Start.</p><div class="chips">' +
+          pchip("ftimer", "off", "Off", !P.ftimer || P.ftimer === "off") +
+          pchip("ftimer", "25", "25 min + 5 break", P.ftimer === "25") +
+          pchip("ftimer", "50", "50 min + 10 break", P.ftimer === "50") +
+          "</div>"
+        );
+      },
+      () =>
+        '<h2>Your plan</h2><ul class="msum"><li>Test<span>' +
+        esc(P.date || P.nodate ? dateLine() : "Not set (counts as a week)") +
+        "</span></li><li>Each day<span>" +
+        (P.mins ? (P.mins === 90 ? "90+" : P.mins) + " minutes" : "30 minutes") +
+        "</span></li><li>Style<span>" +
+        (P.style === "quiz" ? "Quiz me first" : "Read first") +
+        "</span></li><li>Decks rated<span>" +
+        ds.filter((d) => P.rate[d.id]).length +
+        " of " +
+        ds.length +
+        "</span></li><li>Quick check<span>" +
+        (P.wcheck ? plural(checkSecs().length, "question") + " first" : "Skipped") +
+        "</span></li><li>Focus timer<span>" +
+        (!P.ftimer || P.ftimer === "off" ? "Off" : P.ftimer === "50" ? "50 + 10" : "25 + 5") +
+        '</span></li></ul><p class="muted">You can change any answer later, and skip, move or swap any step in the plan.</p>',
+    ],
+    onDone: () => {
+      if (!P.date && !P.nodate) P.nodate = true;
+      if (!P.mins) P.mins = 30;
+      ds.forEach((d) => {
+        if (!P.rate[d.id] && !planSecs().filter((s) => s.d.id === d.id).every((s) => P.rateSec[s.id])) P.rate[d.id] = "shaky";
       });
+      if (P.ftimer === "25") focusStart(25, 5);
+      else if (P.ftimer === "50") focusStart(50, 10);
+      save();
+      UI.tab = "plan";
+      UI.last.start = "plan";
+      if (P.wcheck) startCheck();
+      else {
+        P.phase = "plan";
+        buildRoute();
+        save();
+        render();
+        window.scrollTo(0, 0);
+      }
+    },
   });
-  h += "</div></div>";
-  h +=
-    '<div class="qnav"><button class="btn" data-act="plcheck"' +
-    (ready ? "" : " disabled") +
-    ">Start the quick check (" +
-    plural(nq, "question") +
-    ")</button>" +
-    (P.route ? '<button class="btn sec" data-act="plback">Back to my route</button>' : "") +
-    "</div>" +
-    (ready ? "" : '<p class="hint">Pick a date (or "No date yet"), your time, and a rating for every deck to start.</p>');
-  return h + "</section>";
 }
+ACT.plwiz = () => planWizard();
+ACT.plstart = () => {
+  const P = SAVE.plan;
+  if (P && P.route) return goTool("plan");
+  goTool("plan");
+  planWizard();
+};
 function standHTML() {
   const pw = practiceWeak();
   let h = '<details class="plstand"><summary>Where you stand, section by section</summary>';
@@ -590,7 +677,13 @@ ACT.plset = (t) => {
     k = t.dataset.k,
     v = t.dataset.v;
   if (k === "mins") P.mins = Number(v);
-  else if (k === "today") {
+  else if (k === "style") P.style = v;
+  else if (k === "wcheck") P.wcheck = v === "1";
+  else if (k === "ftimer") P.ftimer = v;
+  else if (k === "tomorrow") {
+    P.date = isoDay(new Date(today0().getTime() + DAY));
+    P.nodate = false;
+  } else if (k === "today") {
     P.date = isoDay(today0());
     P.nodate = false;
   } else if (k === "nodate") {
@@ -626,10 +719,7 @@ ACT.plcheck = () => {
   UI.planEdit = false;
   startCheck();
 };
-ACT.pledit = () => {
-  UI.planEdit = true;
-  render();
-};
+ACT.pledit = () => planWizard();
 ACT.plback = () => {
   UI.planEdit = false;
   render();

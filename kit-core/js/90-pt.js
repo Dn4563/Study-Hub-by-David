@@ -1,7 +1,7 @@
 /* Practice Test and exams. Sections sit behind their own top tabs. One question at a time with a numbered
    palette (gray = not visited, outlined = visited, green = correct, red = incorrect, amber = partly right,
    ring = current, corner mark = flagged). Question types: mcq, tf, label, diagram, frq, saq. */
-const PT = { sec: 0, secs: [], timerOn: false, elapsed: 0, iv: null, retest: null, msg: "", intro: {}, res: null };
+const PT = { sec: 0, secs: [], timerOn: false, elapsed: 0, iv: null, retest: null, msg: "", intro: {}, res: null, list: {} };
 const TYPE_NAME = { mcq: "Multiple choice", tf: "True or false", label: "Labeling", diagram: "Diagram labeling", frq: "Free response", saq: "Short answer", wfr: "Free response" };
 const newSt = () => ({ elim: [], visited: false, checked: false, sel: null, correct: null, flag: false, items: {}, work: "", abox: "", ans: {}, revealed: false, mark: null, pm: {} });
 const isWritten = (q) => q.type === "frq" || q.type === "saq" || q.type === "wfr";
@@ -20,6 +20,108 @@ function normAns(v, formula) {
 }
 const isFormulaAns = (a) => !/\s/.test(a) && /[A-Z]/.test(a) && !/^[A-Z][a-z]{3,}$/.test(a);
 const typedOk = (v, acc) => acc.some((a) => normAns(v, isFormulaAns(a)) === normAns(a, isFormulaAns(a)));
+/* Chemistry formula entry: a typed part whose accepted answer is a formula gets a live preview (H2SO4 shows as
+   H₂SO₄, Fe3+ as Fe³⁺), a row of symbol buttons, and an optional "Boxes" mode: symbol in the middle, charge top
+   right, number bottom right. Checking is unchanged (typedOk). */
+const isFmlPart = (p) => Array.isArray(p.accept) && p.accept.some(isFormulaAns);
+function fmtFormula(v) {
+  const sub = "₀₁₂₃₄₅₆₇₈₉",
+    sup = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+  return String(v || "")
+    .replace(/->/g, "→")
+    .replace(/\^(\d*)([+-])/g, (m, n, c) => n.replace(/\d/g, (d) => sup[d]) + (c === "+" ? "⁺" : "⁻"))
+    .replace(/([A-Za-z)\]])(\d+)([+-])(?![\w(])/g, (m, a, n, c) => a + n.replace(/\d/g, (d) => sup[d]) + (c === "+" ? "⁺" : "⁻"))
+    .replace(/([A-Za-z)\]])([+-])(?![\w(])/g, (m, a, c) => a + (c === "+" ? "⁺" : "⁻"))
+    .replace(/([A-Za-z)\]])(\d+)/g, (m, a, n) => a + n.replace(/\d/g, (d) => sub[d]))
+    .replace(/\*/g, "·");
+}
+const FBOX_N = 3;
+function fboxesHTML(s, p) {
+  const B = (s.boxes && s.boxes[p.k]) || [];
+  const n = Math.max(FBOX_N, B.length);
+  let h = '<span class="fboxes" data-fk="' + esc(p.k) + '">';
+  for (let i = 0; i < n; i++) {
+    const b = B[i] || ["", "", ""];
+    h +=
+      '<span class="fel"><input class="fsym" data-fb="0" data-i="' +
+      i +
+      '" maxlength="6" value="' +
+      esc(b[0]) +
+      '" aria-label="Part ' +
+      esc(p.k) +
+      ", symbol " +
+      (i + 1) +
+      '" placeholder="' +
+      (i === 0 ? "Na" : "") +
+      '"><input class="fsup" data-fb="1" data-i="' +
+      i +
+      '" maxlength="3" value="' +
+      esc(b[1]) +
+      '" aria-label="charge" placeholder="' +
+      (i === 0 ? "+" : "") +
+      '"><input class="fsub" data-fb="2" data-i="' +
+      i +
+      '" maxlength="2" value="' +
+      esc(b[2]) +
+      '" aria-label="number" placeholder="' +
+      (i === 0 ? "2" : "") +
+      '"></span>';
+  }
+  return h + '<button type="button" class="btn ghost small" data-act="fadd" data-k="' + esc(p.k) + '">+ symbol</button></span>';
+}
+/* Boxes → the answer text: each symbol, then its number; the charge goes on top in the preview. */
+function fboxText(B) {
+  return B.map((b) => (b[0] || "").trim() + (b[2] || "").replace(/\D/g, "") + ((b[1] || "").trim() ? "^" + (b[1] || "").trim().replace(/^(\d*)([+-])?$/, (m, n, c) => n + (c || "+")) : "")).join("");
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (!UNIT || !t.matches || !t.matches(".fboxes input")) return;
+  const wrap = t.closest(".fboxes"),
+    k = wrap.dataset.fk,
+    c = cur3();
+  c.s.boxes = c.s.boxes || {};
+  const B = [];
+  wrap.querySelectorAll(".fel").forEach((el) => B.push([...el.querySelectorAll("input")].map((x) => x.value)));
+  c.s.boxes[k] = B;
+  const inp = document.querySelector('input[data-ans="' + k + '"]');
+  if (inp) {
+    inp.value = fboxText(B).replace(/\^[\d]*[+-]/g, "");
+    PTinput(inp);
+    const pv = document.querySelector('[data-prev="' + k + '"]');
+    if (pv) pv.textContent = fmtFormula(fboxText(B));
+  }
+});
+let F_LAST = null;
+document.addEventListener("focusin", (e) => {
+  if (e.target && e.target.dataset && e.target.dataset.fml) F_LAST = e.target.dataset.ans;
+});
+ACT.fins = (t) => {
+  const inp = document.querySelector('input[data-ans="' + (F_LAST || "") + '"]') || document.querySelector("input[data-fml]");
+  if (!inp || inp.disabled) return;
+  const a = inp.selectionStart == null ? inp.value.length : inp.selectionStart,
+    b = inp.selectionEnd == null ? a : inp.selectionEnd;
+  inp.value = inp.value.slice(0, a) + t.dataset.v + inp.value.slice(b);
+  inp.focus();
+  try {
+    inp.setSelectionRange(a + t.dataset.v.length, a + t.dataset.v.length);
+  } catch (e) {}
+  PTinput(inp);
+};
+ACT.fbox = (t) => {
+  SAVE.settings.fbox = t.dataset.v === "1";
+  save();
+  render();
+};
+ACT.fadd = (t) => {
+  const c = cur3(),
+    k = t.dataset.k;
+  c.s.boxes = c.s.boxes || {};
+  const B = c.s.boxes[k] || [];
+  while (B.length < FBOX_N) B.push(["", "", ""]);
+  B.push(["", "", ""]);
+  c.s.boxes[k] = B;
+  render();
+};
 const itemsOf = (q) => (q.type === "diagram" ? q.pins.map((p, i) => Object.assign({ t: "Pin " + (i + 1) }, p)) : q.items);
 
 function initPT() {
@@ -350,15 +452,62 @@ function writtenHTML(q, s, nav, topic, sec) {
   if (q.lead) h += '<p class="stem">' + esc(q.lead) + "</p>";
   if (q.data && q.data.length) h += '<figure class="src"><figcaption><b>Data</b></figcaption>' + q.data.map((d) => "<p>" + esc(d) + "</p>").join("") + "</figure>";
   if (isTyped(q)) {
-    h += '<p class="hint">Type each answer. For formulas, plain numbers are fine (Fe2O3); a hydrate can use * or a period for the dot.</p><ol class="fparts typed" type="a">';
+    const fml = q.parts.some(isFmlPart),
+      boxes = fml && SAVE.settings.fbox && !s.revealed;
+    h +=
+      '<div class="fhead"><p class="hint">Type each answer.' +
+      (fml ? " Formulas: type H2SO4 or Fe3+ and it shows as H₂SO₄ and Fe³⁺; the buttons add the other symbols." : "") +
+      "</p>" +
+      (fml && !s.revealed ? '<div class="seg fseg" role="group" aria-label="How to enter formulas"><button data-act="fbox" data-v="0" aria-pressed="' + !boxes + '">Type it</button><button data-act="fbox" data-v="1" aria-pressed="' + !!boxes + '">Boxes</button></div>' : "") +
+      '</div><ol class="fparts typed" type="a">';
     h += q.parts
       .map((p) => {
         const v = s.ans[p.k] || "",
-          mk = s.revealed ? (s.pm[p.k] ? " right" : " wrong") : "";
-        return '<li class="tpart' + mk + '"><label><span class="tq">' + esc(p.prompt) + '</span><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" data-ans="' + esc(p.k) + '" value="' + esc(v) + '"' + (s.revealed ? " disabled" : "") + ' aria-label="Answer for ' + esc(p.prompt) + '"></label></li>';
+          mk = s.revealed ? (s.pm[p.k] ? " right" : " wrong") : "",
+          isF = isFmlPart(p);
+        return (
+          '<li class="tpart' +
+          mk +
+          '"><label><span class="tq">' +
+          esc(p.prompt) +
+          '</span><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" data-ans="' +
+          esc(p.k) +
+          '"' +
+          (isF ? ' data-fml="1"' : "") +
+          ' value="' +
+          esc(v) +
+          '"' +
+          (s.revealed ? " disabled" : "") +
+          (isF && boxes ? ' class="fhide" tabindex="-1"' : "") +
+          ' aria-label="Answer for ' +
+          esc(p.prompt) +
+          '"></label>' +
+          (isF && boxes ? fboxesHTML(s, p) : "") +
+          (isF ? '<span class="fprev" data-prev="' + esc(p.k) + '" aria-live="polite">' + esc(fmtFormula(v)) + "</span>" : "") +
+          "</li>"
+        );
       })
       .join("");
     h += "</ol>";
+    if (fml && !s.revealed && !boxes)
+      h +=
+        '<div class="ftb" role="group" aria-label="Formula symbols">' +
+        [
+          ["₂", "x₂", "Subscript 2"],
+          ["₃", "x₃", "Subscript 3"],
+          ["⁺", "⁺", "Plus charge"],
+          ["⁻", "⁻", "Minus charge"],
+          ["²⁺", "²⁺", "2+ charge"],
+          ["(", "(", "Open parenthesis"],
+          [")", ")", "Close parenthesis"],
+          ["(aq)", "(aq)", "Aqueous"],
+          ["(s)", "(s)", "Solid"],
+          ["→", "→", "Arrow"],
+          ["·", "·", "Hydrate dot"],
+        ]
+          .map((b) => '<button type="button" data-act="fins" data-v="' + esc(b[0]) + '" aria-label="' + b[2] + '">' + esc(b[1]) + "</button>")
+          .join("") +
+        "</div>";
   } else if (q.type === "frq") {
     h += '<ol class="fparts" type="a">' + q.parts.map((p) => "<li>" + esc(p.prompt) + "</li>").join("") + "</ol>";
     h += '<label class="part"><span class="pl">Work area <small>Show your steps and reasoning.</small></span><textarea rows="7" data-ans="work">' + esc(s.work) + "</textarea></label>";
@@ -368,6 +517,7 @@ function writtenHTML(q, s, nav, topic, sec) {
       h += '<label class="part"><span class="pl">(' + esc(p.k) + ") " + esc(p.prompt) + '</span><textarea rows="4" data-ans="' + esc(p.k) + '" placeholder="Complete sentences: topic sentence, evidence, analysis.">' + esc(s.ans[p.k] || "") + "</textarea></label>";
     });
   h += '<div class="qnav"><button class="btn" data-act="ptcheck"' + (s.revealed ? " disabled" : "") + ">Check Answer</button>" + nav + "</div>";
+  if (!isTyped(q) && typeof gemAskHTML === "function") h += gemAskHTML();
   if (!s.revealed) return h;
   h += '<div class="model"><h4>' + (q.type === "saq" ? "Model answers" : "Worked solution") + "</h4>";
   q.parts.forEach((p) => {
@@ -384,6 +534,8 @@ function writtenHTML(q, s, nav, topic, sec) {
     else if (isTyped(q)) h += '<p class="' + (s.pm[p.k] ? "tyes" : "tno") + '"><b>' + (s.pm[p.k] ? "Correct." : "Your answer: " + esc(s.ans[p.k] || "(blank)") + ".") + "</b> " + esc(p.model) + "</p>";
     else h += "<p>" + esc(p.model) + "</p>";
     if (p.earns) h += '<p class="earns"><b>Earns the point if:</b> ' + esc(p.earns) + "</p>";
+    h += kwHTML(s, p);
+    if (s.aiw && s.aiw.parts && s.aiw.parts[p.k]) h += '<p class="aiw"><b>Gemini (' + (s.aiw.parts[p.k].points ? "1 point" : "0 points") + "):</b> " + esc(s.aiw.parts[p.k].why || "") + "</p>";
     if (p.weak) h += '<p class="weak"><b>Weak answer:</b> ' + esc(p.weak) + "</p>";
     h +=
       '<div class="selfmark" role="group" aria-label="Self-mark part ' +
@@ -405,6 +557,16 @@ function writtenHTML(q, s, nav, topic, sec) {
       '">I missed it</button></div></div>';
   });
   const f = frac(q, s);
+  if (!isTyped(q) && typeof gemKey === "function" && gemKey())
+    h +=
+      '<div class="qnav"><button class="btn sec" data-act="gemw"' +
+      (s.aiwLoading ? " disabled" : "") +
+      ">" +
+      (s.aiwLoading ? "Grading with Gemini…" : s.aiw ? "Grade again with Gemini" : "Grade with Gemini") +
+      "</button>" +
+      (s.aiw && s.aiw.overall ? '<span class="muted">' + esc(s.aiw.overall) + "</span>" : "") +
+      "</div>" +
+      (s.aiwErr ? '<p class="wnote bad">Gemini couldn\'t grade this: ' + esc(s.aiwErr) + " Mark it yourself with the buttons above.</p>" : "");
   h += '<div class="qnav"><button class="mk" data-act="ptmark" data-v="1">All parts right</button><button class="mk" data-act="ptmark" data-v="0">All parts wrong</button></div>';
   if (f !== null) h += '<div class="fb' + (f === 1 ? " ok" : f === 0 ? " bad" : "") + '"><b>' + fmt1(f * q.parts.length) + " of " + q.parts.length + " parts</b> counted." + topic + "</div>";
   return h + "</div>";
@@ -486,31 +648,40 @@ function ptSectionHTML() {
   return h + "</section>";
 }
 
+/* The tools that used to sit in a row above every question, now in an Options pop-up. */
 function ptControls(M) {
-  const sec = PT.secs[PT.sec];
-  return (
-    '<div class="ptctl"><button class="btn ghost" data-act="pttimer" aria-pressed="' +
-    PT.timerOn +
-    '">' +
-    ICON.clock +
-    (PT.timerOn ? '<span id="pttime">' + fmtT(PT.elapsed) + "</span>" : "Timer off") +
-    '</button><button class="btn ghost" data-act="ptshuffle" aria-pressed="' +
-    !!sec.shuffled +
-    '">' +
-    ICON.shuffle +
-    (sec.shuffled ? "Shuffled" : "Shuffle questions") +
-    "</button>" +
-    (sec.shuffled ? '<button class="btn ghost" data-act="ptunshuffle">' + ICON.undo + "Original order</button>" : "") +
-    (sec.qs.some((q) => q.type === "wfr") ? '<button class="btn ghost" data-act="ptrandom">' + ICON.shuffle + (sec.grader === "ebq" ? "Random prompt I haven't done" : "Random article I haven't done") + "</button>" : "") +
-    '<button class="btn ghost" data-act="ptretest">' +
-    ICON.redo +
-    'Retest missed questions</button><button class="btn ghost" data-act="ptprint">' +
-    ICON.print +
-    'Print view</button><button class="btn ghost" data-act="ptresetsec">Reset section</button><button class="btn ghost danger" data-act="ptresetall">' +
-    (M === "exam" ? "Reset entire exam" : "Reset entire test") +
-    "</button></div>"
-  );
+  return '<button class="btn sec small" data-act="ptopts">Options</button>';
 }
+ACT.ptopts = () => {
+  const M = ptMode();
+  openModal({
+    title: "Practice Test options",
+    body: () => {
+      const sec = PT.secs[PT.sec];
+      return (
+        "<h2>Options</h2><div class=\"mopts\">" +
+        '<button data-act="pttimer" aria-pressed="' +
+        PT.timerOn +
+        '"><b>' +
+        (PT.timerOn ? "Timer on: " + fmtT(PT.elapsed) : "Timer off") +
+        "</b><span>Counts up while you work.</span></button>" +
+        '<button data-act="' +
+        (sec.shuffled ? "ptunshuffle" : "ptshuffle") +
+        '"><b>' +
+        (sec.shuffled ? "Put questions back in order" : "Shuffle the questions") +
+        "</b><span>This section only.</span></button>" +
+        (sec.qs.some((q) => q.type === "wfr") ? '<button data-act="ptrandom"><b>' + (sec.grader === "ebq" ? "Random prompt I haven't done" : "Random article I haven't done") + "</b><span></span></button>" : "") +
+        '<button data-act="ptretest"><b>Retest missed questions</b><span>Only the ones you got wrong here.</span></button>' +
+        '<button data-act="ptprint"><b>Print view</b><span>Opens a page you can print.</span></button>' +
+        '<button data-act="ptresetsec"><b>Clear this section</b><span>Asks first.</span></button>' +
+        '<button data-act="ptresetall"><b>' +
+        (M === "exam" ? "Clear the whole mock exam" : "Clear every practice section") +
+        "</b><span>Asks first.</span></button></div>" +
+        '<div class="mfoot"><span></span><button class="btn" data-act="mclose">Done</button></div>'
+      );
+    },
+  });
+};
 function examGroups() {
   const g = [];
   PT.secs.forEach((x) => {
@@ -518,27 +689,74 @@ function examGroups() {
   });
   return g;
 }
+/* How far a section is: answered count, score, and whether it's done. */
+function secProgress(sec) {
+  const ids = sec.order,
+    done = ids.filter((id) => frac(sec.byId[id], sec.st[id]) !== null).length;
+  return { done: done, n: ids.length, full: done === ids.length && ids.length > 0 };
+}
+/* With more than 3 sections, the Practice Test opens on a list: each section's progress, and "Next up". */
+function ptListHTML(M, groups) {
+  const list = PT.secs.map((x, i) => [x, i]).filter((x) => x[0].mode === M);
+  const next = list.find((x) => !secProgress(x[0]).full);
+  let h = '<div class="toolrow"><span class="muted">' + list.filter((x) => secProgress(x[0]).full).length + " of " + list.length + ' sections done</span></div><ul class="seclist">';
+  list.forEach(([x, i]) => {
+    const p = secProgress(x),
+      isNext = next && next[1] === i;
+    h +=
+      '<li class="' +
+      (isNext ? "next" : "") +
+      '"><span class="sn">' +
+      esc(x.name) +
+      '</span><span class="sp">' +
+      (p.full ? "Done, " + secScore(x, x.order, x.st).replace(" so far", "") : p.done ? p.done + " of " + p.n + " answered" : plural(p.n, "question")) +
+      '</span><button class="btn ' +
+      (isNext ? "" : "sec ") +
+      'small" data-act="ptsec" data-i="' +
+      i +
+      '">' +
+      (isNext ? (p.done ? "Continue" : "Start") : p.full ? "Review" : p.done ? "Continue" : "Open") +
+      "</button></li>";
+  });
+  h += "</ul>";
+  if (groups.length) h += '<div class="qnav">' + groups.map((g) => '<button class="btn sec" data-act="ptres" data-g="' + esc(g) + '">' + esc(g) + " results</button>").join("") + "</div>";
+  return h;
+}
 function ptHTML() {
   const M = ptMode();
   const groups = M === "exam" ? examGroups() : [];
   const showRes = M === "exam" && PT.res != null && groups.indexOf(PT.res) >= 0;
+  const mine = PT.secs.filter((x) => x.mode === M);
+  if (!mine.length) return '<section class="panel"><p class="muted">No sections here yet.</p></section>';
+  if (showRes) return '<div class="toolrow"><button class="btn ghost small" data-act="ptlist">' + ICON.back + "All sections</button></div>" + resHTML(PT.res);
+  if (PT.list && PT.list[M] !== false && mine.length > 3) return ptListHTML(M, groups);
+  if (!PT.secs[PT.sec] || PT.secs[PT.sec].mode !== M) PT.sec = PT.secs.findIndex((x) => x.mode === M);
   let h =
-    '<div class="subtabs" role="tablist">' +
-    PT.secs
-      .map((x, i) =>
-        x.mode !== M ? "" : '<button class="stab" role="tab" data-act="ptsec" data-i="' + i + '" aria-selected="' + (!showRes && i === PT.sec) + '">' + esc(x.name) + "</button>",
-      )
-      .join("") +
-    groups.map((g) => '<button class="stab res" role="tab" data-act="ptres" data-g="' + esc(g) + '" aria-selected="' + (showRes && PT.res === g) + '">' + esc(g) + " results</button>").join("") +
-    "</div>";
-  if (showRes) return h + resHTML(PT.res);
-  if (!PT.secs.some((x) => x.mode === M)) return h + '<section class="panel"><p class="muted">No sections here yet.</p></section>';
-  h += ptControls(M) + (PT.msg ? '<p class="msg">' + esc(PT.msg) + "</p>" : "");
+    '<div class="toolrow">' +
+    (mine.length > 3
+      ? '<button class="btn ghost small" data-act="ptlist">' + ICON.back + "All sections</button>"
+      : mine.length > 1
+        ? '<div class="seg secseg" role="group" aria-label="Sections">' +
+          PT.secs.map((x, i) => (x.mode !== M ? "" : '<button data-act="ptsec" data-i="' + i + '" aria-pressed="' + (i === PT.sec) + '">' + esc(x.name) + "</button>")).join("") +
+          "</div>"
+        : "<span></span>") +
+    '<span class="ptright">' +
+    (PT.timerOn ? '<span class="pttimer">' + ICON.clock + '<span id="pttime">' + fmtT(PT.elapsed) + "</span></span>" : "") +
+    ptControls(M) +
+    "</span></div>" +
+    (PT.msg ? '<p class="msg">' + esc(PT.msg) + "</p>" : "");
   PT.msg = "";
   h += ptSectionHTML();
   if (M === "exam") h += '<div class="qnav"><button class="btn" data-act="ptres" data-g="' + esc(PT.secs[PT.sec].exam) + '">Finish and see ' + esc(PT.secs[PT.sec].exam) + " results</button></div>";
   return h;
 }
+ACT.ptlist = () => {
+  PT.list = PT.list || {};
+  PT.list[ptMode()] = true;
+  PT.res = null;
+  render();
+  window.scrollTo(0, 0);
+};
 
 /* ---------- actions ---------- */
 function PTinput(t) {
@@ -546,6 +764,10 @@ function PTinput(t) {
     k = t.dataset.ans;
   if (k === "work" || k === "abox") c.s[k] = t.value;
   else c.s.ans[k] = t.value;
+  if (t.dataset.fml) {
+    const pv = document.querySelector('[data-prev="' + k + '"]');
+    if (pv) pv.textContent = fmtFormula(t.value);
+  }
   PTsave();
 }
 /* A right answer in a retest round also updates the main section. */
@@ -573,6 +795,7 @@ function checkCur() {
     c.s.revealed = true;
   } else if (isWritten(c.q)) {
     if (isTyped(c.q) && !c.s.revealed) c.q.parts.forEach((p) => (c.s.pm[p.k] = typedOk(c.s.ans[p.k], p.accept)));
+    else if (hasKw(c.q) && !c.s.revealed) kwGrade(c.q, c.s);
     c.s.revealed = true;
   }
   else if (c.q.type === "label" || c.q.type === "diagram") {
@@ -591,7 +814,10 @@ function checkCur() {
 ACT.ptsec = (t) => {
   PT.res = null;
   PT.sec = Number(t.dataset.i);
+  PT.list = PT.list || {};
+  PT.list[ptMode()] = false;
   render();
+  window.scrollTo(0, 0);
 };
 ACT.ptres = (t) => {
   PT.res = t.dataset.g;
@@ -657,6 +883,7 @@ ACT.ptpart = (t) => {
 };
 /* Jump to a question in this section that hasn't been checked yet. */
 ACT.ptrandom = () => {
+  if (MODAL.o) closeModal(true);
   const v = curView(),
     open = v.ids.map((id, n) => (frac(v.sec.byId[id], v.st[id]) === null ? n : -1)).filter((n) => n >= 0);
   if (!open.length) {
@@ -685,6 +912,7 @@ ACT.ptflag = () => {
   render();
 };
 ACT.ptshuffle = () => {
+  if (MODAL.o) closeModal(true);
   const sec = PT.secs[PT.sec];
   sec.order = shuf(sec.orig);
   sec.cur = 0;
@@ -694,6 +922,7 @@ ACT.ptshuffle = () => {
   render();
 };
 ACT.ptunshuffle = () => {
+  if (MODAL.o) closeModal(true);
   const sec = PT.secs[PT.sec];
   sec.order = sec.orig.slice();
   sec.cur = 0;
@@ -707,20 +936,25 @@ function freshSec(sec) {
   sec.cur = 0;
 }
 ACT.ptresetsec = () => {
-  if (!ask("Clear every answer in " + PT.secs[PT.sec].name + "?")) return;
-  freshSec(PT.secs[PT.sec]);
-  if (PT.retest && PT.retest.sec === PT.sec) PT.retest = null;
-  render();
+  if (MODAL.o) closeModal(true);
+  sure("Clear this section?", "Clear every answer in " + PT.secs[PT.sec].name + "? This can't be undone.", "Clear section", () => {
+    freshSec(PT.secs[PT.sec]);
+    if (PT.retest && PT.retest.sec === PT.sec) PT.retest = null;
+    render();
+  });
 };
 ACT.ptresetall = () => {
   const M = ptMode();
-  if (!ask(M === "exam" ? "Clear every answer in every exam section?" : "Clear every answer in every practice section?")) return;
-  PT.secs.forEach((x) => x.mode === M && freshSec(x));
-  PT.retest = null;
-  PT.elapsed = 0;
-  render();
+  if (MODAL.o) closeModal(true);
+  sure(M === "exam" ? "Clear the mock exam?" : "Clear every practice section?", M === "exam" ? "Clear every answer in every exam section? This can't be undone." : "Clear every answer in every practice section? This can't be undone.", "Clear everything", () => {
+    PT.secs.forEach((x) => x.mode === M && freshSec(x));
+    PT.retest = null;
+    PT.elapsed = 0;
+    render();
+  });
 };
 ACT.ptretest = () => {
+  if (MODAL.o) closeModal(true);
   const sec = PT.secs[PT.sec],
     ids = sec.order.filter((id) => ["bad", "partial"].indexOf(status(sec.byId[id], sec.st[id])) >= 0);
   if (!ids.length) {
@@ -751,6 +985,7 @@ ACT.pttimer = () => {
 
 /* ---------- printable view ---------- */
 ACT.ptprint = () => {
+  if (MODAL.o) closeModal(true);
   const sec = PT.secs[PT.sec],
     seen = {};
   let b = "";

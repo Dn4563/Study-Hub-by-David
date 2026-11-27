@@ -28,6 +28,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       virtualConsole: vc,
       beforeParse(w) {
         w.confirm = () => true;
+        w.__useConfirm = true;
         w.scrollTo = () => {};
         w.open = () => null;
         w.print = () => {};
@@ -53,7 +54,12 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       for (let i = 0; i < w.localStorage.length; i++) o[w.localStorage.key(i)] = w.localStorage.getItem(w.localStorage.key(i));
       return o;
     };
-    return { w, d, q, qa, click, byText, change, storage, close: () => w.close() };
+    /* Switch to a tool the way the grouped tabs do (Study, Test yourself, Notes and their sub-tools). */
+    const go = (t, what) => {
+      ok(w.eval("hasTool(" + JSON.stringify(t) + ")"), "found " + (what || "tool " + t));
+      w.eval("goTool(" + JSON.stringify(t) + ")");
+    };
+    return { w, d, q, qa, click, byText, change, storage, go, close: () => w.close() };
   }
   const assertNoErrors = (where) => {
     if (errors.length) throw new Error(where + ": page errors:\n  " + errors.join("\n  "));
@@ -106,7 +112,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
   P.close();
   P = open(units[0], { "sk:hub:theme": "light" });
   ok(P.d.documentElement.getAttribute("data-theme") === "light", "unit follows the hub's old theme key");
-  P.click(P.q('.tab[data-t="set"]'), "Settings tab");
+  P.go("set", "Settings tab");
   P.change(P.q('select[data-pref="theme"]'), "dark");
   ok(P.w.localStorage.getItem("sk:theme") === "dark" && P.d.documentElement.getAttribute("data-theme") === "dark", "Settings theme writes the site-wide theme");
   assertNoErrors("theme");
@@ -117,9 +123,9 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     P = open(unit);
     ok(P.q("h1"), "unit header");
     ok(P.q(".credit a") && /David Noskow/.test(P.q(".credit").textContent), "unit page shows the engine credit");
-    const tabs = P.qa(".tab").map((t) => t.dataset.t);
+    const tabs = P.w.eval("TABS.map((t) => t[0])");
     for (const t of tabs) {
-      P.click(P.q('.tab[data-t="' + t + '"]'), "tab " + t);
+      P.go(t, "tab " + t);
       ok(P.q("main").innerHTML.length > 50, "tab " + t + " has content");
     }
     assertNoErrors(unit + " tabs");
@@ -129,7 +135,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     // the countdown, Hide / Show, the 5-minute warning, time-up submit, and Gemini (fake reply, no network).
     if (P.w.eval("hasFR() ? 1 : 0")) {
       ok(P.qa(".tab").map((t) => t.dataset.t).join(",") === "fr,set", "free-response unit shows only its page and Settings");
-      P.click(P.q('.tab[data-t="fr"]'), "Free response tab");
+      P.go("fr", "Free response tab");
       const asked = [];
       let answer = true;
       P.w.confirm = (m) => (asked.push(m), answer);
@@ -214,7 +220,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       P.click(P.q('[data-act="frmult"][data-m="1"]'), "regular time");
       P.click(P.q('[data-act="frstart"]'), "Start EBQ only");
       ok(P.w.eval("frById(FR.mock.ids[0]).grader") === "ebq" && Math.round((P.w.eval("FR.mock.endAt") - Date.now()) / 60000) === 45, "EBQ only draws one EBQ on 45 minutes");
-      P.click(P.q('.tab[data-t="set"]'), "Settings tab");
+      P.go("set", "Settings tab");
       ok(P.q("#gemkey") && P.q(".gemsteps"), "Settings has the Gemini box with setup steps");
       assertNoErrors(unit + " free response");
       P.close();
@@ -231,21 +237,21 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       continue;
     }
     // 2c. Practice-only unit (no cards and no fr.json): only the practice tabs.
-    if (!P.q('.tab[data-t="learn"]')) {
-      ok(!P.q('.tab[data-t="quiz"]') && !P.q('.tab[data-t="plan"]') && P.q('.tab[data-t="pt"]'), "practice-only unit shows only practice tabs");
+    if (!P.w.eval('hasTool("learn")')) {
+      ok(!P.w.eval('hasTool("quiz")') && !P.w.eval('hasTool("plan")') && P.w.eval('hasTool("pt")'), "practice-only unit shows only practice tools");
       log(`  ${unit}: OK`);
       continue;
     }
 
     // 3. One full lesson, answering wrong once so the retry path runs
-    P.click(P.q('.tab[data-t="learn"]'), "Learn tab");
+    P.go("learn", "Learn tab");
     const hasIntros = P.w.eval("D.decks.some((dk) => (dk.intro || []).some(Boolean) || dk.sections.some((s) => (s.intro || []).some(Boolean)))");
     if (hasIntros) {
       const firstIntro = P.w.eval("(D.decks[0].intro || []).some(Boolean) || (D.decks[0].sections[0].intro || []).some(Boolean)");
       if (firstIntro) ok(P.q(".intro"), "first lesson shows its intro before the terms");
-      P.click(P.q('.tab[data-t="guide"]'), "Study guide tab");
+      P.go("guide", "Study guide tab");
       ok(P.qa(".intro").length > 0, "study guide shows the intros");
-      P.click(P.q('.tab[data-t="learn"]'), "Learn tab");
+      P.go("learn", "Learn tab");
     }
     P.click(P.q('[data-act="lquiz"]'), "Quiz me");
     if (P.w.eval("MIX")) {
@@ -314,7 +320,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     assertNoErrors(unit + " section review");
 
     // 4. Quiz builder with immediate feedback, then results and retry
-    P.click(P.q('.tab[data-t="quiz"]'), "Quiz tab");
+    P.go("quiz", "Quiz tab");
     {
       // Limits, no repeats within a quiz, and a rerun starts with different questions.
       const qq = P.w.eval(`(() => { initQ(); const keep = Object.assign({}, UI.q), focus = SAVE.settings.focus; SAVE.settings.focus = "random";
@@ -356,7 +362,9 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     assertNoErrors(unit + " quiz");
 
     // 5. Flashcards (Quizlet-style): flip, sort, Back undoes, swap sides, star, browse, round results
-    P.click(P.q('.tab[data-t="flash"]'), "Flashcards tab");
+    P.go("flash", "Flashcards tab");
+    ok(!P.q('main select[data-set="fcPool"]') && P.q('[data-act="fcopts"]'), "flashcard settings sit behind an Options button");
+    P.click(P.q('[data-act="fcopts"]'), "Flashcard options");
     P.change(P.q('select[data-set="fcPool"]'), "all");
     if (P.q('[data-act="fcgot"]')) {
       P.click(P.q('[data-act="fcflip"]'), "flip");
@@ -399,11 +407,12 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
 
     // 6. Every practice and exam section: answer the first question
     for (const mode of ["pt", "exam"]) {
-      if (!P.q('.tab[data-t="' + mode + '"]')) continue;
-      P.click(P.q('.tab[data-t="' + mode + '"]'), mode + " tab");
-      const nsec = P.qa('[data-act="ptsec"]').length;
-      for (let i = 0; i < nsec; i++) {
-        P.click(P.qa('[data-act="ptsec"]')[i], "section " + i);
+      if (!P.w.eval("hasTool(" + JSON.stringify(mode) + ")")) continue;
+      P.go(mode, mode + " tab");
+      const secIdx = P.w.eval("PT.secs.map((x, i) => (x.mode === ptMode() ? i : -1)).filter((i) => i >= 0)");
+      if (secIdx.length > 3) ok(P.q(".seclist") && P.q(".seclist li.next"), mode + ": the section list shows progress and what's next");
+      for (const i of secIdx) {
+        P.w.eval("ACT.ptsec({ dataset: { i: '" + i + "' } })");
         const type = P.w.eval("cur3().q.type");
         if (type === "mcq" || type === "tf") {
           P.click(P.q('[data-act="ptopt"]'), "choice");
@@ -443,24 +452,83 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
         P.click(P.q('[data-act="ptnext"]'), "Next");
         P.click(P.q('[data-act="ptprev"]'), "Previous");
       }
+      const opts = () => P.click(P.q('[data-act="ptopts"]'), "Practice Test options");
+      opts();
+      ok(P.q('#modalhost [data-act="ptresetall"]'), "reset and the other tools sit in the Options pop-up");
       P.click(P.q('[data-act="ptshuffle"]'), "Shuffle");
+      opts();
       P.click(P.q('[data-act="ptunshuffle"]'), "Original order");
+      opts();
       P.click(P.q('[data-act="ptretest"]'), "Retest missed");
+      opts();
       P.click(P.q('[data-act="pttimer"]'), "Timer on");
       P.click(P.q('[data-act="pttimer"]'), "Timer off");
       P.click(P.q('[data-act="ptprint"]'), "Print view");
       if (mode === "exam") {
-        P.click(P.q('[data-act="ptres"]'), "exam results");
+        P.w.eval("PT.retest = null; render()");
+        P.click(P.q('main [data-act="ptres"]'), "exam results");
         ok(/results/.test(P.q("main h2").textContent) && P.q(".resq"), "exam results page lists questions");
       }
       assertNoErrors(unit + " " + mode);
     }
 
+    // 6a. Written answers: formula entry (preview, symbol buttons, boxes), the key-word checker, the Gemini prompt
+    // card and Gemini grading (fake reply, no network).
+    {
+      ok(P.w.eval("fmtFormula('H2SO4')") === "H₂SO₄" && P.w.eval("fmtFormula('Fe3+')") === "Fe³⁺" && P.w.eval("fmtFormula('CuSO4*5H2O')") === "CuSO₄·5H₂O", "formula preview formats subscripts, charges and the hydrate dot");
+      ok(P.w.eval("fboxText([['Al','','2'],['S','','3']])") === "Al2S3", "boxes turn into the typed answer");
+      const kw = P.w.eval("kwPart({ check: [['empire', 'dynasty'], ['tax', 'tribute']], checkLabels: ['Names it', 'How it paid'] }, 'The Ottoman Empire collected tribute.')");
+      ok(kw.ok && kw.checks.length === 2, "the key-word checker gives the point when every key idea is there");
+      ok(!P.w.eval("kwPart({ check: [['empire'], ['tax']] }, 'The empire grew.').ok"), "a missing key idea means no point");
+      const kwBad = P.w.eval("D.practice.sections.flatMap((s) => s.questions.flatMap((q) => (q.parts || []).filter((p) => p.check && !kwPart(p, p.model).ok).map((p) => q.id + ' ' + p.k)))");
+      ok(kwBad.length === 0, "every model answer passes its own key-word checklist" + (kwBad.length ? ": " + kwBad.join(", ") : ""));
+      const fq = P.w.eval("(() => { for (let i = 0; i < PT.secs.length; i++) { const s = PT.secs[i], n = s.order.findIndex((id) => isTyped(s.byId[id]) && s.byId[id].parts.some(isFmlPart)); if (n >= 0) return [i, n, s.mode]; } return null; })()");
+      if (fq) {
+        P.go(fq[2] === "exam" ? "exam" : "pt", "formula section");
+        P.w.eval("ACT.ptsec({ dataset: { i: '" + fq[0] + "' } }); curView().h.cur = " + fq[1] + "; const v = curView(); v.st[v.ids[v.h.cur]] = newSt(); render()");
+        const inp = P.q("input[data-fml]");
+        inp.value = "H2O";
+        inp.dispatchEvent(new P.w.Event("input", { bubbles: true }));
+        ok(P.q("[data-prev='" + inp.dataset.ans + "']").textContent === "H₂O", "typing a formula shows it formatted");
+        inp.dispatchEvent(new P.w.FocusEvent("focusin", { bubbles: true }));
+        P.click(P.q('[data-act="fins"][data-v="₂"]'), "subscript button");
+        ok(/₂$/.test(P.q("input[data-fml]").value), "a symbol button adds to the answer");
+        P.click(P.q('[data-act="fbox"][data-v="1"]'), "Boxes");
+        ok(P.qa(".fboxes .fsym").length >= 3, "boxes mode shows symbol boxes");
+        P.click(P.q('[data-act="fbox"][data-v="0"]'), "Type it");
+      }
+      const wq = P.w.eval("(() => { for (let i = 0; i < PT.secs.length; i++) { const s = PT.secs[i], n = s.order.findIndex((id) => { const q = s.byId[id]; return (q.type === 'saq' || q.type === 'frq') && !isTyped(q); }); if (n >= 0) return [i, n, s.mode]; } return null; })()");
+      if (wq) {
+        P.go(wq[2] === "exam" ? "exam" : "pt", "written section");
+        P.w.eval("localStorage.removeItem('sk:gemini'); localStorage.removeItem('sk:gemini-ask'); ACT.ptsec({ dataset: { i: '" + wq[0] + "' } }); curView().h.cur = " + wq[1] + "; const v = curView(); v.st[v.ids[v.h.cur]] = newSt(); render()");
+        ok(P.q(".gemask"), "a written question offers free AI grading (no key yet)");
+        P.click(P.q('[data-act="gemlater"]'), "Not now");
+        ok(!P.q(".gemask"), "Not now hides the offer");
+        P.w.eval("localStorage.removeItem('sk:gemini-ask'); render()");
+        P.click(P.q('[data-act="gemsetup"]'), "Set up");
+        ok(P.q("#modalhost #gemkey") && P.q("#modalhost .gemsteps"), "Set up opens the key steps in a pop-up");
+        P.d.dispatchEvent(new P.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        P.w.eval("localStorage.setItem('sk:gemini', JSON.stringify({ key: 'AIzaFAKE', model: 'gemini-2.5-flash' }))");
+        const k0 = P.w.eval("cur3().q.parts[0].k");
+        P.w.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ parts: { [k0]: { points: 1, why: "Specific and correct." } }, overall: "Good." }) }] } }] }) });
+        P.click(P.q('[data-act="ptcheck"]'), "Check written answer");
+        ok(P.q('[data-act="gemw"]'), "with a key, written answers get Grade with Gemini");
+        await P.w.ACT_gemwForTest();
+        ok(P.w.eval("cur3().s.pm['" + k0 + "']") === true && P.q(".aiw"), "Gemini's grade fills in the mark and its reason");
+        P.w.fetch = async () => ({ ok: false, status: 429, json: async () => ({ error: { message: "Quota exceeded for this API key." } }) });
+        await P.w.ACT_gemwForTest();
+        ok(/key isn't working/.test(P.q("#modalhost").textContent), "a key over its limit gets the Update key pop-up");
+        P.d.dispatchEvent(new P.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        P.w.eval("localStorage.removeItem('sk:gemini')");
+      }
+      assertNoErrors(unit + " written answers");
+    }
+
     // 6b. Diagram labeling: image embedded, pins placed, partial credit
     const dg = P.w.eval("(() => { for (let i = 0; i < PT.secs.length; i++) { const s = PT.secs[i], n = s.order.findIndex((id) => s.byId[id].type === 'diagram'); if (n >= 0) return [i, n, s.mode]; } return null; })()");
     if (dg) {
-      P.click(P.q('.tab[data-t="' + (dg[2] === "exam" ? "exam" : "pt") + '"]'), "practice tab");
-      P.click(P.q('[data-act="ptsec"][data-i="' + dg[0] + '"]'), "diagram section");
+      P.go((dg[2] === "exam" ? "exam" : "pt"), "practice tab");
+      P.w.eval("ACT.ptsec({ dataset: { i: '" + dg[0] + "' } })");
       P.click(P.q('[data-act="ptjump"][data-n="' + dg[1] + '"]'), "diagram question");
       ok(P.q(".dimg img").getAttribute("src").startsWith("data:image/"), "diagram image is embedded");
       ok(P.q(".diagram .credit"), "diagram shows its image credit");
@@ -533,7 +601,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     ok(P.w.eval("PT.secs.some(s => Object.values(s.st).some(x => x.checked || Object.keys(x.pm).length))"), "practice answers survive reload");
 
     // 8. Settings: lock-in off, export, import, reset
-    P.click(P.q('.tab[data-t="set"]'), "Settings tab");
+    P.go("set", "Settings tab");
     P.change(P.q('input[data-set="confirm"]'), false);
     ok(P.w.eval("SAVE.settings.confirm") === false, "Lock in can be turned off");
     P.click(P.q('[data-act="exp"]'), "Export");
@@ -549,15 +617,73 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
 
     // 8b. Study plan: setup, quick check on the shared question screen, labels, route, route bar, editing, reload.
     P = open(unit);
-    P.click(P.q('.tab[data-t="plan"]'), "Study plan tab");
-    ok(P.q('[data-act="plcheck"][disabled]'), "quick check waits until everything is answered");
+    // 8a. Start screen: opens first, three choices, the tool grid, and the pop-up (Esc closes it).
+    ok(P.w.eval("UI.tab") === "start" && P.q('[data-act="tnstart"]') && P.q('[data-act="plstart"]') && P.q('[data-act="tools"]'), "a unit opens on Start with its three choices");
+    ok(!/ of \d+ terms marked/.test(P.q("main").textContent) && !P.q(".meter"), "Start shows no unit-wide totals");
+    P.click(P.q('[data-act="tools"]'), "Let me pick");
+    ok(P.qa(".toolsgrid button").length >= 4, "Let me pick shows the tools");
+    P.click(P.q('.toolsgrid [data-t="learn"]'), "Learn from the grid");
+    ok(P.w.eval("UI.tab") === "learn" && P.q(".seg") && P.q(".top.slimtop"), "tools have the slim header and the Study sub-tabs");
+    P.go("start", "Start");
+    P.click(P.q('[data-act="focusopen"]'), "Focus timer");
+    ok(P.q("#modalhost .modal"), "the focus timer opens in a pop-up");
+    P.d.dispatchEvent(new P.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    ok(!P.q("#modalhost .modal"), "Esc closes the pop-up");
+    P.click(P.q('[data-act="focusopen"]'), "Focus timer again");
+    P.click(P.q('[data-act="focusgo"]'), "Start focus timer");
+    ok(P.q(".fbar") && /\d+:\d\d/.test(P.q("#fclock").textContent), "the focus bar counts down at the top");
+    P.w.eval("focusLeave(); render()");
+    ok(P.q(".fleft") && /You left at/.test(P.q(".fleft").textContent), "leaving the tab pauses and says when you left");
+    P.click(P.q('[data-act="focusback"]'), "Back to it");
+    ok(!P.q(".fleft") && !P.w.eval("focusState().paused"), "Back to it resumes");
+    P.click(P.q('[data-act="focusend"]'), "End focus");
+    ok(!P.q(".fbar"), "End turns the timer off");
+    // 8a2. Tonight's session: setup pop-up, a round read then answered, misses carried, the mixed check.
+    P.click(P.q('[data-act="tnstart"]'), "Test tomorrow?");
+    ok(P.q('#modalhost [data-act="tnset"][data-v="read"]'), "tonight's setup asks Read first or Quiz me first");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
+    P.click(P.q('#modalhost [data-act="tnset"][data-k="mins"][data-v="30"]'), "30 minutes");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Start round 1");
+    ok(P.w.eval("UI.tab") === "tonight" && P.qa(".tncard").length >= 1 && P.qa(".tncard").length <= 10, "round 1 shows 1 to 10 terms to read");
+    P.click(P.q('[data-act="tnquiz"]'), "Quiz me");
+    {
+      const nq = P.w.eval("UI.run.qs.length");
+      for (let n = 0; n < nq; n++) {
+        const k = n === 0 ? P.w.eval("UI.run.qs[UI.run.i].options.findIndex(o => !o.ok)") : P.w.eval("UI.run.qs[UI.run.i].options.findIndex(o => o.ok)");
+        P.click(P.q('[data-act="rpick"][data-k="' + k + '"]'), "answer");
+        if (P.q('[data-act="rconfirm"]')) P.click(P.q('[data-act="rconfirm"]'), "Lock in");
+        P.click(P.q('[data-act="rnext"]'), "Next");
+      }
+    }
+    ok(P.w.eval("SAVE.tonight.carry.length") === 1 && /come back/.test(P.q("main").textContent), "a missed term is carried to the next round");
+    P.w.eval("SAVE.tonight.cur = SAVE.tonight.rounds.length - 1; render()");
+    P.click(P.q('[data-act="tnnext"]'), "on to the mixed check");
+    ok(P.w.eval("UI.run && UI.run.title") === "Mixed check", "the session ends with the mixed check");
+    P.w.eval("UI.run = null; SAVE.tonight.phase = 'done'; SAVE.tonight.final = { ok: 9, n: 10 }; render()");
+    ok(/Done for tonight/.test(P.q("main").textContent), "the session finishes");
+    assertNoErrors(unit + " start, focus and tonight");
+    P.close();
+    // 8b. Study plan setup in a step-by-step pop-up.
+    P = open(unit);
+    P.click(P.q('[data-act="plstart"]'), "I have a few days");
+    ok(P.q("#modalhost .modal .mdots"), "the plan setup is a step-by-step pop-up");
     const tmr = new Date(Date.now() + 86400000), iso = tmr.getFullYear() + "-" + String(tmr.getMonth() + 1).padStart(2, "0") + "-" + String(tmr.getDate()).padStart(2, "0");
-    P.change(P.q('input[data-plan="date"]'), iso);
-    ok(/tomorrow/.test(P.q(".plan .hint").textContent), "test date shows as tomorrow");
-    P.click(P.q('[data-act="plset"][data-k="mins"][data-v="60"]'), "60 minutes");
+    P.change(P.q('#modalhost input[data-plan="date"]'), iso);
+    ok(/tomorrow/.test(P.q("#modalhost .hint").textContent), "test date shows as tomorrow");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
+    P.click(P.q('#modalhost [data-act="plset"][data-k="mins"][data-v="60"]'), "60 minutes");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
+    P.click(P.q('#modalhost [data-act="plset"][data-k="style"][data-v="read"]'), "Read first");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
     const pdecks = P.w.eval("planDecks().map(d => String(d.id))");
-    pdecks.forEach((id, n) => P.click(P.q('[data-act="plset"][data-k="r:' + id + '"][data-v="' + (n === 0 ? "new" : "know") + '"]'), "rate deck"));
-    P.click(P.q('[data-act="plcheck"]:not([disabled])'), "Start the quick check");
+    pdecks.forEach((id, n) => P.click(P.q('#modalhost [data-act="plset"][data-k="r:' + id + '"][data-v="' + (n === 0 ? "new" : "know") + '"]'), "rate deck"));
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next (quick check yes)");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Next (timer off)");
+    ok(/Your plan/.test(P.q("#modalhost").textContent), "the last step sums up the plan");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "Make my plan");
+    ok(P.w.eval("UI.run && UI.run.title") === "Quick check" && P.w.eval("planTestLabel()") === "Test tomorrow", "Make my plan starts the quick check, and the header shows the test date");
     ok(P.q('[data-act="relim"]'), "quick check has cross-off");
     ok(P.q('[data-act="rskip"]'), "quick check has Skip");
     const nq = P.w.eval("UI.run.qs.length");
@@ -591,7 +717,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     P.close();
     {
       const saved = open(unit, planStore);
-      saved.click(saved.q('.tab[data-t="plan"]'), "Study plan tab again");
+      saved.go("plan", "Study plan tab again");
       ok(saved.q(".plstep"), "the route is still there after a reload");
       const rk = saved.w.eval("activeSteps().find(s => s.kind === 'recheck').key");
       saved.click(saved.q('[data-act="plgo"][data-k="' + rk + '"]'), "re-check");

@@ -52,16 +52,19 @@ function learnHTML() {
     li = LI(),
     lesson = LESSONS[li],
     dk = deckOf(lesson.deck);
-  const nDone = LESSONS.filter((l) => SAVE.done[l.id]).length,
-    pct = Math.round((100 * nDone) / LESSONS.length);
+  /* Counts are per deck ("Lesson 3 of 8 in Health Psychology"), not the whole unit, so it never opens on "1 of 61". */
+  const inDeck = LESSONS.filter((l) => l.deck === lesson.deck),
+    nDone = inDeck.filter((l) => SAVE.done[l.id]).length,
+    pct = Math.round((100 * nDone) / inDeck.length);
   let h =
     '<section class="lessonbar"><div class="rtop"><span class="muted">Lesson ' +
-    (li + 1) +
+    (inDeck.indexOf(lesson) + 1) +
     " of " +
-    LESSONS.length +
-    ", " +
-    nDone +
-    ' done</span><button class="btn sec small" data-act="lmap" aria-expanded="' +
+    inDeck.length +
+    " in " +
+    esc(dk.name) +
+    (nDone ? ", " + nDone + " done" : "") +
+    '</span><button class="btn sec small" data-act="lmap" aria-expanded="' +
     !!UI.showMap +
     '">Lesson map</button></div><span class="bar" aria-hidden="true"><i style="width:' +
     pct +
