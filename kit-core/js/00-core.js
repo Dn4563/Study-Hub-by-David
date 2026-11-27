@@ -33,12 +33,138 @@ const ICON = {
   gear: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/><circle cx="12" cy="12" r="6.2"/>', 20),
 };
 
+/* Midterm review (course.json "midterm": { "week": "YYYY-MM-DD", "units": [...], "mockQs": 40 }): a page at #mid built
+   from the course's units, for courses with 2 or more units that have cards. */
+const MIDCFG = COURSE.midterm || null;
+const midUnits = () =>
+  MIDCFG ? COURSE.units.filter((u) => (!MIDCFG.units || MIDCFG.units.indexOf(u.id) >= 0) && UNITDATA[u.id] && (UNITDATA[u.id].decks || []).some((d) => !d.optional)) : [];
+const midOn = () => midUnits().length > 1;
+
 /* Which unit is open: the part of the address after #. No match means the course home page. */
 const UNIT = (() => {
   const id = decodeURIComponent(location.hash.slice(1));
+  if (id === "mid" && midOn()) return { id: "mid", label: "Midterm", title: "Midterm review", mid: true, learnMix: midUnits().every((u) => u.learnMix) };
   return COURSE.units.find((u) => u.id === id) || null;
 })();
-const D = UNIT ? UNITDATA[UNIT.id] : null;
+/* The midterm page's data: every deck and scenario of its units (ids prefixed with the unit, so they never clash),
+   and a mock midterm of multiple-choice questions from the units the student picked, split evenly. Questions that
+   share a source stay together. The same mock comes back on every visit until the student asks for a new one. */
+function midData() {
+  let M = {};
+  try {
+    M = (JSON.parse(localStorage.getItem("sk:" + COURSE.id + ":mid:kit") || "{}") || {}).mid || {};
+  } catch (e) {}
+  const us = midUnits(),
+    pick = us.filter((u) => !M.units || !M.units.length || M.units.indexOf(u.id) >= 0);
+  const data = { images: {}, decks: [], sq: [], flows: [], trees: [], tables: [], watch: [], practice: { sections: [] } };
+  us.forEach((u) => {
+    const src = UNITDATA[u.id];
+    Object.assign(data.images, src.images || {});
+    src.decks.forEach((dk) => {
+      if (dk.optional) return;
+      data.decks.push({
+        id: u.id + ":" + dk.id,
+        name: dk.name,
+        unit: u.id,
+        sections: dk.sections.map((sc, si) => ({
+          name: sc.name,
+          key0: u.id + ":" + (sc.key0 || dk.id + "." + si),
+          cards: sc.cards.map((c, ci) => {
+            const oid = c.id0 || dk.id + "." + si + "." + ci;
+            return Object.assign({}, c, { id0: u.id + ":" + oid, oid: oid, unit: u.id });
+          }),
+        })),
+      });
+    });
+    (src.sq || []).forEach((s) => data.sq.push(Object.assign({}, s, { deck: u.id + ":" + s.deck, unit: u.id })));
+  });
+  let seed = (M.seed || 1) >>> 0;
+  const rnd = () => {
+    seed = (seed + 0x6d2b79f5) >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const mix = (a) => {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  const N = (MIDCFG && MIDCFG.mockQs) || 40,
+    groups = [],
+    sources = {};
+  /* Each picked unit's multiple-choice questions, in groups (questions that share a source stay together). */
+  const pools = pick.map((u) => {
+    const seen = {},
+      byKey = {},
+      keys = [];
+    (UNITDATA[u.id].practice.sections || []).forEach((s) =>
+      s.questions.forEach((q) => {
+        if (q.type !== "mcq" || seen[q.stem + "|" + (q.src || "")]) return;
+        seen[q.stem + "|" + (q.src || "")] = 1;
+        const k = q.src ? "s:" + q.src : "q:" + q.id;
+        if (!byKey[k]) {
+          keys.push(k);
+          byKey[k] = [];
+        }
+        byKey[k].push({ q: q, s: s });
+      }),
+    );
+    return { u: u, groups: mix(keys).map((k) => byKey[k]), n: keys.reduce((a, k) => a + byKey[k].length, 0) };
+  });
+  /* Split N evenly; a unit with too few questions gives the rest to the others. */
+  const quota = new Map(pools.map((p) => [p, 0]));
+  let open = pools.filter((p) => p.n > 0),
+    left = N;
+  while (left > 0 && open.length) {
+    const share = Math.max(1, Math.floor(left / open.length));
+    open.forEach((p) => {
+      const add = Math.min(share, p.n - quota.get(p), left);
+      quota.set(p, quota.get(p) + add);
+      left -= add;
+    });
+    open = open.filter((p) => quota.get(p) < p.n);
+  }
+  pools.forEach((p) => {
+    let n = 0;
+    p.groups.forEach((g) => {
+      if (n >= quota.get(p)) return;
+      n += g.length;
+      groups.push(
+        g.map((x) => {
+          const c = Object.assign({}, x.q, { id: p.u.id + ":" + x.q.id, topic: p.u.label + ": " + (x.q.topic || x.q.skill || "Mixed"), unit: p.u.id });
+          if (x.q.src) {
+            c.src = p.u.id + ":" + x.q.src;
+            sources[c.src] = (x.s.sources || {})[x.q.src];
+          }
+          return c;
+        }),
+      );
+    });
+  });
+  const none = pools.filter((p) => !p.n).map((p) => p.u.label);
+  const qs = [].concat(...mix(groups));
+  if (qs.length)
+    data.practice.sections.push({
+      name: "Mock midterm",
+      mode: "exam",
+      exam: "Mock midterm",
+      tips: [
+        "Multiple-choice questions from the units you picked, split evenly." + (none.length ? " " + none.join(" and ") + (none.length > 1 ? " have" : " has") + " no multiple-choice practice, so " + (none.length > 1 ? "they aren't" : "it isn't") + " in the mock; practice " + (none.length > 1 ? "them" : "it") + " in " + (none.length > 1 ? "their units" : "its unit") + "." : ""),
+        "The real midterm's length and format aren't posted yet, so treat this as practice, not a preview.",
+        "To time yourself, open Options and turn on the timer.",
+      ],
+      none: none,
+      examTips: ["Answer every question, then check your score by unit."],
+      sources: sources,
+      questions: qs,
+    });
+  return data;
+}
+const D = UNIT ? (UNIT.mid ? midData() : UNITDATA[UNIT.id]) : null;
 /* Moving between units reloads the page; the focus timer's "leave this page?" check skips this case. */
 addEventListener("hashchange", () => {
   window.__navOK = true;

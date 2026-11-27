@@ -52,7 +52,7 @@ function homeHTML() {
     "</p></header>";
   /* "Continue": the unit opened last in this browser. */
   const last = readJSON(LASTK),
-    lu = last && COURSE.units.find((u) => u.id === last.unit);
+    lu = last && (last.unit === "mid" && midOn() ? { id: "mid", label: "Midterm review", title: "Mixed review of every unit" } : COURSE.units.find((u) => u.id === last.unit));
   h += "<main>";
   if (lu)
     h +=
@@ -86,7 +86,9 @@ function homeHTML() {
       ICON.chev +
       "</span></a></li>";
   });
-  return h + "</ul>" + backupHTML() + "</main>" + creditLine();
+  h += "</ul>";
+  if (midOn()) h += midRowHTML();
+  return h + backupHTML() + "</main>" + creditLine();
 }
 
 /* A unit's test date from its saved Study plan, as "test on Thu, Dec 3" (until the day). */
@@ -136,6 +138,7 @@ function loadSave() {
   SAVE.star = o.star || {};
   SAVE.plan = o.plan || null;
   SAVE.tonight = o.tonight || null;
+  SAVE.mid = o.mid || null;
   const s = o.settings || {};
   /* Older kits kept theme and size per kit; carry them over once. */
   if (!readJSON(PREFK) && (s.theme || s.size !== undefined)) {
@@ -206,6 +209,16 @@ function initShell() {
   indexCards();
   rebuild();
   const secs = D.practice.sections;
+  /* The midterm page: its own overview, the mock midterm, and Settings. */
+  if (UNIT.mid) {
+    TABS = [["mid", "Midterm review"]];
+    if (secs.length) TABS.push(["exam", "Mock midterm"]);
+    TABS.push(["set", "Settings"]);
+    UI = { tab: "mid", deck: 0, run: null, q: null, qmsg: "", last: {} };
+    if (SAVE.ui && TABS.some((t) => t[0] === SAVE.ui.tab)) UI.tab = SAVE.ui.tab;
+    document.title = "Midterm review | " + COURSE.name;
+    return;
+  }
   /* A free-response unit (fr.json) has its own simple page, plus Settings. */
   if (hasFR()) {
     frLoad();
@@ -275,11 +288,14 @@ function goTool(t) {
   window.scrollTo(0, 0);
 }
 function navHTML() {
-  if (hasFR())
+  /* Free-response units and the midterm page have only a few tabs, so they show them all in one row. */
+  if (hasFR() || UNIT.mid)
     return (
-      '<nav class="tabs" aria-label="Sections"><div class="tabrow"><button class="tab" data-act="tab" data-t="fr"' +
-      (UI.tab === "fr" ? ' aria-current="page"' : "") +
-      '>Free response</button></div><button class="tab tabgear" data-act="tab" data-t="set" aria-label="Settings" title="Settings"' +
+      '<nav class="tabs" aria-label="Sections"><div class="tabrow">' +
+      TABS.filter((t) => t[0] !== "set")
+        .map((t) => '<button class="tab" data-act="tab" data-t="' + t[0] + '"' + (UI.tab === t[0] ? ' aria-current="page"' : "") + ">" + esc(t[1]) + "</button>")
+        .join("") +
+      '</div><button class="tab tabgear" data-act="tab" data-t="set" aria-label="Settings" title="Settings"' +
       (UI.tab === "set" ? ' aria-current="page"' : "") +
       ">" +
       ICON.gear +
@@ -339,6 +355,8 @@ function view() {
       return ptHTML();
     case "fr":
       return frHTML();
+    case "mid":
+      return UI.run ? runHTML() : midHTML();
     case "cheat":
       return cheatHTML();
     case "prog":
@@ -355,8 +373,8 @@ function persistUI() {
 function render() {
   if (!UNIT) return renderHome();
   /* The full header (course, unit title, test date) only on Start; every other screen gets one slim line. */
-  const fullHead = UI.tab === "start" || !ALL.length;
-  const test = typeof planTestLabel === "function" ? planTestLabel() : "";
+  const fullHead = UI.tab === "start" || UI.tab === "mid" || !ALL.length;
+  const test = UNIT.mid ? midTestLabel() : typeof planTestLabel === "function" ? planTestLabel() : "";
   let h =
     '<header class="top' +
     (fullHead ? "" : " slimtop") +
@@ -367,7 +385,7 @@ function render() {
     "All units</button></div>" +
     (fullHead
       ? '<p class="kicker">' + esc(COURSE.name + ", " + UNIT.label) + "</p><h1>" + esc(UNIT.title) + "</h1>" + (test ? '<p class="testchip">' + esc(test) + "</p>" : "")
-      : '<p class="slimline"><span class="slimt">' + esc(UNIT.label + ": " + UNIT.title) + "</span>" + (test ? '<span class="slimd">' + esc(test) + "</span>" : "") + "</p>") +
+      : '<p class="slimline"><span class="slimt">' + esc(UNIT.mid ? UNIT.title : UNIT.label + ": " + UNIT.title) + "</span>" + (test ? '<span class="slimd">' + esc(test) + "</span>" : "") + "</p>") +
     "</header>";
   h += navHTML() + (typeof planBarHTML === "function" ? planBarHTML() : "") + (typeof focusBarHTML === "function" ? focusBarHTML() : "");
   if (["guide", "flash"].indexOf(UI.tab) >= 0 && !UI.run) {

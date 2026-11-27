@@ -34,7 +34,7 @@ function modalRender(first) {
     '" role="dialog" aria-modal="true" aria-label="' +
     esc(o.title || "Pop-up") +
     '" data-act="mnoop"><div class="mtop">' +
-    (n > 1 ? '<div class="mdots" aria-label="Step ' + (s + 1) + " of " + n + '">' + Array.from({ length: n }, (_, i) => '<i class="' + (i === s ? "on" : i < s ? "done" : "") + '"></i>').join("") + "</div>" : "<span></span>") +
+    (n > 1 ? '<div class="mdots" role="img" aria-label="Step ' + (s + 1) + " of " + n + '">' + Array.from({ length: n }, (_, i) => '<i class="' + (i === s ? "on" : i < s ? "done" : "") + '"></i>').join("") + "</div>" : "<span></span>") +
     '<button class="mx" data-act="mclose" aria-label="Close">' +
     ICON.x +
     "</button></div>" +

@@ -67,7 +67,7 @@ function guideHTML() {
       h += "</details>";
     });
   if (!UI.deck) {
-    if (D.trees.length) h += '<section class="deckblock"><h2>Hierarchies</h2>' + D.trees.map((t) => '<pre class="tree">' + esc(t) + "</pre>").join("") + "</section>";
+    if (D.trees.length) h += '<section class="deckblock"><h2>Hierarchies</h2>' + D.trees.map((t) => '<pre class="tree" tabindex="0">' + esc(t) + "</pre>").join("") + "</section>";
     if (D.tables.length) h += '<section class="deckblock"><h2>Comparisons</h2>' + D.tables.map(tableHTML).join("") + "</section>";
   }
   return h;

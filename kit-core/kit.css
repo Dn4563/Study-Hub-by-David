@@ -627,3 +627,28 @@ input.fhide { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-e
 .fel .fsup, .fel .fsub { width: 2.3rem; height: 1.6rem; min-height: 0; padding: 0 4px; text-align: center; font-size: .88rem; margin-left: 3px; }
 .fel .fsup { align-self: start; }
 .fel .fsub { align-self: end; }
+
+/* Midterm review (#mid) */
+.midtoday, .midmock { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 20px; }
+.midtoday > div, .midmock > div:first-child { flex: 1 1 22rem; min-width: 0; }
+.midmock .qnav { margin: 0; }
+.midok { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-weight: 600; }
+.midtiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 12px; }
+.midtile { display: grid; align-content: start; gap: 6px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; }
+.midtile .muted { font-size: .92rem; line-height: 1.4; }
+.midtile.off { background: none; border-style: dashed; }
+.midw { font-weight: 600; font-size: .95rem; margin-top: 4px; }
+.midtile .lnk { justify-self: start; margin-top: 4px; }
+.midcheck { margin: 14px 0 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.midtiles + .panel, .midcheck + .panel { margin-top: 18px; }
+.midh { margin-top: 18px; }
+.midread { margin: 0; display: grid; grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr); gap: 0 18px; }
+.midread dt { font-weight: 600; padding: 9px 0; border-top: 1px solid var(--rule); }
+.midread dd { margin: 0; padding: 9px 0; border-top: 1px solid var(--rule); color: var(--ink-2); }
+.midrow { margin-top: 18px; text-decoration: none; color: inherit; }
+.midrow:hover { border-color: var(--accent); }
+.midfr { margin-top: 14px; }
+@media (max-width: 640px) {
+  .midread { grid-template-columns: minmax(0, 1fr); }
+  .midread dd { border-top: 0; padding-top: 0; }
+}

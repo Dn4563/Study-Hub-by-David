@@ -26,10 +26,11 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
     - `js/00-core.js` … `99-boot.js`
     - `build-lib.mjs`, `parse-lib.mjs`, `test-lib.mjs` (the jsdom click-through)
 - **Each kit:**
-  - `content/course.json` lists the units. Per-unit flags: `learnMix`, `recall` and `legacyKeys`.
+  - `content/course.json` lists the units. Per-unit flags: `learnMix`, `recall` and `legacyKeys`. Optional `midterm` (`week`, `units`, `mockQs`) turns on the Midterm review page.
   - `content/<unit>/` holds the unit's files:
     - `cards.md` (`# Deck N: Name`, `## Section`, `| Term | Definition | Hook |`)
     - `asks.json` (applied questions per card), `watch.md`, `trees.md`, `guide.json`
+    - `groups.json` (optional): splits a big deck along its section lines, keeping card ids
     - `scenarios.json`, `practice.json`, `images.json` with `assets/`
     - `data.json` is generated and gitignored.
   - `core/` is a copy of kit-core; refresh it with `npm run sync-core`.
@@ -62,6 +63,17 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
   - Generators: `scripts/asks-src/u1_*.py`, `u2_*.py` (+ `mkasks.py`), `scripts/practice-src/*.py`.
   - GitHub Pages: David turns it on (Settings → Pages → main / root); until then the site and hub link 404.
 - **Hub clean-up (Nov 27):** status labels ("Current", "Test done, kept for review") removed; units get an optional `testDate` instead ("Test on Thu, Dec 3" / "Test tomorrow" / "Test today" until the day, then nothing), and the course with the soonest test comes first. The two AP Psychology cards are now one ("AP Psychology", id `psych-david`) with a "Phineas's original kit" link (`links` in `courses.json`). Each course has one short line. Hub page is about a quarter shorter. `test/hub-check.mjs` checks dates, order and that the old labels are gone. Redesign audit: https://claude.ai/artifact/E99dRkiezkhhZneTxqGqfK (11 ranked problems; next: mockups).
+- **Redesign (Nov 27, on the work branch, NOT on `main` yet; waiting for David's "push"):** built while David was offline, from the audit and the mockups (https://claude.ai/artifact/WZFpxaG9XUdqQCrHwQvw5M). Card ids and save keys are unchanged, so everyone's progress carries over.
+  - **Pop-ups:** one shared pop-up (`js/05-modal.js`: steps with dots, Back / Next, ✕ and Esc, focus kept inside). Every "are you sure?" now uses it.
+  - **Tabs:** Start, Study (Learn, Flashcards, Quiz), Test yourself (Practice Test, Mock exam), Notes (Study guide, Cheat sheet, Progress), and the gear. Full header only on Start; a slim one-line header elsewhere. Old saved tabs still open the right tool.
+  - **Start screen** (`js/12-start.js`): "Pick up where you left off", then three choices: **Test tomorrow?** (`js/76-tonight.js`: pick Read first or Quiz me first and 30 / 45 / 60 / 90 minutes; rounds of 6–10 terms with the section's intro, misses come back first in the next round, a 10-question check at the end), **I have a few days** (the Study plan, now set up in a 7-step pop-up) and **Let me pick** (all tools).
+  - **Focus timer** (`js/77-focus.js`): 25 + 5, 50 + 10 or custom (suggested from the student's time). A bar on every screen with Pause, Full screen and End. Switching tabs pauses it and says "You left at 8:42"; closing the page asks first. A website can't block other apps.
+  - **Less clutter:** one Deck picker instead of chip rows; Flashcards and Practice Test settings moved into Options pop-ups; Practice Test shows a section list with "Next up"; Study guide decks fold; Learn says "Lesson x of y in [deck]"; the course page shows "N% done" and the test date instead of big term counts, plus Continue.
+  - **Gemini in every kit:** one key for the whole site. On written questions without a key, a small card offers Set up / Not now / Don't ask again. If the key stops working (bad key, quota), a pop-up offers to update it. Any self-marked written question can be graded by Gemini.
+  - **Key-word checker** (`js/91-kwcheck.js`): a part with `check` groups shows ✓/✗ for each key idea and marks itself; I got it / I missed it still override. Used on 59 AP World short-answer parts (`scripts/saq-src/checks.py` + `apply.py`) and 31 exact-answer parts in Chem Ch 3–4. npm test checks every model answer passes its own checklist.
+  - **Chem formula entry:** typed formulas show live (H2O as H₂O, Fe3+ as Fe³⁺), with a symbol toolbar and an optional Boxes mode (symbol, subscript, charge).
+  - **Psych regroup:** the 3 biggest decks are split along their section lines by `content/<unit>/groups.json` (ours; the importer never touches it): Research Methods → "Studies & Correlation" + "Experiments & Ethics"; Sleep, Consciousness & Drugs → "Sleep & Consciousness" + "Drugs & Addiction"; Treatment → "History & Medications", "Basics, Psychodynamic & Humanistic" (Modes of therapy moved here), "Cognitive & Behavioral Therapies". Phineas's wording is unchanged; cards keep their old ids (`id0`/`key0`), so progress and plans carry over; watch-out notes, chains and scenarios follow their terms.
+  - **Midterm review** (`js/78-midterm.js`, page `#mid`, row on each course page): Psych, Chem, World and Business (`"midterm"` in `content/course.json`; courses with 2+ units only, so not Jewish History yet). Setup pop-up (day, which units, minutes, Read first / Quiz me first, quick check), a strength tile per unit, a daily mixed review weighted to weak units (answers also update each unit's trouble terms), and a mock midterm of 40 multiple-choice questions from the picked units (same set until "New mock"; count-up timer in Options). VERIFY: only "week of Dec 14" is from David; the exact days, lengths, formats and units, and the 40-question mock, are placeholders.
 - **Hub (Nov 13):** `hub.js` loads `courses.json` with `cache: 'no-cache'`, so a new course or unit shows up on the next visit instead of after the browser's 10-minute cache.
 - **Design check (Nov 16, avoid-ai-design skill):** code scanner now 0 findings (was 2 P1 + 1 P2: arrow glyphs on Flashcards buttons, dot-joined hint strings, hub focus style). Visual review of 110 screenshots (every tab, 5 kits, desktop light and phone dark): removed the colored left-border stripes (unit cards, intro boxes, feedback, watch notes, backup message); on phones the current tab now stays scrolled into view. Settings is a gear icon at the end of the tab bar (outside the scrolling row), so the tabs fit on one line again. Muted text passes AA (5.7:1 or better). The hub's folder tabs and Newsreader + Public Sans are deliberate and stay. Chem's test now runs with more memory (`--max-old-space-size=4096`).
 - **Study plan 2.0 (engine, Nov 16):** first tab in every unit (`js/75-plan.js`).
@@ -110,6 +122,9 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
 - **Wording:** be direct and precise; David notices word choice.
 
 ## Open items
+- **Redesign:** on the work branch in all 6 repos; goes live when David says "push".
+- **Midterms (week of Dec 14):** David sends each course's day, length, format and units; then set them in `course.json` `midterm` and fit the mock to the real format. Jewish History gets a midterm page once it has a second unit.
+- **Test dates:** add `testDate` in the hub's `courses.json` when David sends them.
 - **Diagram licenses:** license and author for the two Chem Ch 3 diagram images (David chose to leave these for now).
 - **Ch 4 mock test:** update it once the real test format is known.
 - **Next units:** David sends source PDFs. Read them all, report the test format and any source disagreements, propose an outline, wait for OK, then build.

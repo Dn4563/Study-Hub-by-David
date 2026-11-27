@@ -229,6 +229,7 @@ function resultHTML() {
     (first.length ? Math.round((ok / first.length) * 100) : 0) +
     "%)</p>";
   if (R.breakdown) h += breakdownHTML(R);
+  if (R.extraHTML) h += R.extraHTML(R);
   if (miss.length) {
     h += "<h3>Review these</h3>";
     miss.forEach((r) => {

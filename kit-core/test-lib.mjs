@@ -755,7 +755,100 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
       assertNoErrors(unit + " migration");
       P.close();
     }
+    // 9b. A save from before the Nov 27 redesign (last tab Quiz, some known and trouble cards, cards in a deck that
+    //     groups.json later split): opens on Start offering Quiz, and every known card still counts.
+    if (P.w.eval("ALL.length")) {
+      const pick = P.w.eval("(() => { const s = ALL.filter((c) => c.id0); const a = (s.length ? s : ALL).slice(0, 3).concat(ALL.slice(-2)); return a.map((c) => c.id); })()");
+      const old = { known: Object.fromEntries(pick.map((id) => [id, true])), trouble: { [pick[0]]: 2 }, done: {}, ui: { tab: "quiz", deck: 0 }, settings: { hooks: true } };
+      const before = open(unit, { ["sk:" + course.id + ":" + unit + ":kit"]: JSON.stringify(old) });
+      ok(before.w.eval("UI.tab") === "start" && before.w.eval("UI.resume") === "quiz", "an old save opens on Start and offers the last tool");
+      ok(/Pick up where you left off/.test(before.q("main").textContent), "Start shows Pick up where you left off");
+      ok(pick.every((id) => before.w.eval("!!(SAVE.known[" + JSON.stringify(id) + "] && BYID[" + JSON.stringify(id) + "])")), "known cards from an old save still match cards");
+      ok(before.w.eval("SAVE.trouble[" + JSON.stringify(pick[0]) + "]") === 2, "trouble counts from an old save survive");
+      assertNoErrors(unit + " old save");
+      before.close();
+    }
     log(`  ${unit}: OK`);
+  }
+
+  // 10. Midterm review (#mid): course row, setup pop-up, quick check, weighted daily review, read-first, unit trouble
+  //     terms updated, the mock midterm (stable until "New mock"), save and reload, start over.
+  P = open("mid");
+  if (!P.w.eval("midOn()")) {
+    ok(!P.w.eval("UNIT"), "#mid opens the course home when there is no midterm review");
+    P.close();
+  } else {
+    const home = open("");
+    ok(home.q('a.midrow[href="#mid"]'), "course home links to Midterm review");
+    home.close();
+    ok(/Midterm review/.test(P.q("h1").textContent), "midterm page header");
+    ok(P.w.eval("TABS.map((t) => t[0]).join()") === "mid,exam,set", "midterm tabs: review, mock, settings");
+    const mu = P.w.eval("midUnits().map((u) => u.id)");
+    ok(mu.length > 1, "midterm covers 2+ units");
+    ok(P.w.eval("ALL.every((c) => c.unit && c.oid && c.id === c.unit + ':' + c.oid) && new Set(ALL.map((c) => c.id)).size === ALL.length"), "midterm card ids are unit-prefixed and unique");
+    const mock0 = P.w.eval("PT.secs[0].qs.map((q) => q.id)");
+    ok(mock0.length >= Math.min(40, 10) && mu.every((u) => mock0.some((id) => id.startsWith(u + ":")) || !P.w.eval("UNITDATA[" + JSON.stringify(u) + "].practice.sections.some((s) => s.questions.some((q) => q.type === 'mcq'))")), "mock midterm draws from every unit with multiple choice");
+    ok(P.w.eval("PT.secs[0].qs.every((q) => !q.src || PT.secs[0].sources[q.src])"), "mock questions keep their sources");
+    // setup: pick the first day, drop the last unit, read first, quick check on
+    P.click(P.q('[data-act="midsetup"]'), "Set it up");
+    ok(P.q("#modalhost .modal"), "setup opens in a pop-up");
+    P.click(P.q('#modalhost [data-act="midset"][data-k="nodate"]'), "not sure yet");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "next");
+    const drop = mu[mu.length - 1];
+    P.click(P.q('#modalhost [data-act="midset"][data-k="unit"][data-v="' + drop + '"]'), "unit toggle");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "next");
+    P.click(P.q('#modalhost [data-act="midset"][data-k="mins"][data-v="15"]'), "15 minutes");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "next");
+    P.click(P.q('#modalhost [data-act="midset"][data-k="style"][data-v="read"]'), "read first");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "next");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "next");
+    ok(/Your midterm review/.test(P.q("#modalhost").textContent), "setup ends on a summary");
+    P.click(P.q('#modalhost [data-act="mnext"]'), "save");
+    ok(!P.w.eval("PT.secs[0].qs.some((q) => q.unit === " + JSON.stringify(drop) + ")"), "the mock leaves out a unit that isn't on the midterm");
+    ok(P.w.eval("UI.run && UI.run.qs.length") === (mu.length - 1) * 3, "quick check: 3 questions per picked unit");
+    // first answer wrong, the rest right
+    const first = P.w.eval("(() => { const q = UI.run.qs[0]; return q.card ? { u: q.card.unit, oid: q.card.oid } : null; })()");
+    P.w.eval("(() => { const R = UI.run; rpickAct(R.qs[0].options.findIndex((o) => !o.ok)); ACT.rnext(); while (!R.done) { rpickAct(R.qs[R.i].options.findIndex((o) => o.ok)); ACT.rnext(); } })()");
+    ok(/By unit/.test(P.q("main").textContent), "quick check results by unit");
+    if (first) ok(P.w.eval("(readJSON(keyOf(COURSE.units.find((u) => u.id === " + JSON.stringify(first.u) + "), 'kit')) || {}).trouble[" + JSON.stringify(first.oid) + "]") === 1, "a miss adds a trouble term in its own unit");
+    P.w.eval("ACT.rdone()");
+    ok(P.qa(".midtile .midw").filter((e) => /%/.test(e.textContent)).length === mu.length - 1, "every picked unit has a strength");
+    ok(P.q(".midtile.off"), "the dropped unit shows as not on the midterm");
+    // weak units get more questions
+    const al = P.w.eval(
+      "(() => { const keep = SAVE.mid.units; SAVE.mid.units = null; const us = midPicked(), h = SAVE.mid.hist;" +
+        " const old = [h[us[0].id], h[us[1].id]]; h[us[0].id] = [0,0,0,0,0]; h[us[1].id] = [1,1,1,1,1];" +
+        " const r = midAlloc(20).map((x) => x[1]); h[us[0].id] = old[0]; h[us[1].id] = old[1]; SAVE.mid.units = keep; return r; })()",
+    );
+    ok(al[0] > al[1] && al.reduce((a, b) => a + b, 0) >= 20, "weak units get more of today's questions (" + al.join(", ") + ")");
+    // today's session, read first
+    P.click(P.q('[data-act="midgo"]'), "start today's review");
+    ok(P.q(".midread dt") && P.w.eval("UI.midRead.qs.length") === P.w.eval("midCount()"), "read first shows the day's terms");
+    P.click(P.q('[data-act="midq"]'), "start the questions");
+    P.w.eval("(() => { const R = UI.run; while (!R.done) { rpickAct(R.qs[R.i].options.findIndex((o) => o.ok)); ACT.rnext(); } ACT.rdone(); })()");
+    ok(/Done today/.test(P.q("main").textContent), "today's review counts as done");
+    assertNoErrors("midterm review");
+    // mock: answer one, reload keeps the same mock and answer; New mock changes it
+    P.go("exam", "Mock midterm tab");
+    ok(/Mock midterm/.test(P.q("main").textContent), "mock midterm opens in the practice-test view");
+    const mock1 = P.w.eval("PT.secs[0].qs.map((q) => q.id).join()");
+    P.w.eval("(() => { const s = PT.secs[0], id = s.order[0]; s.st[id].sel = s.byId[id].ai; s.st[id].checked = true; PTsave(); })()");
+    const store = P.storage();
+    P.close();
+    P = open("mid", store);
+    ok(P.w.eval("PT.secs[0].qs.map((q) => q.id).join()") === mock1, "same mock after reload");
+    ok(P.w.eval("midMock().done") === 1, "mock answers survive reload");
+    ok(P.w.eval("SAVE.mid.setup && SAVE.mid.style === 'read' && SAVE.mid.mins === 15"), "midterm setup survives reload");
+    ok(P.w.eval("UI.tab") === "exam", "the midterm page reopens on the tab used last");
+    P.go("mid", "Midterm review tab");
+    P.click(P.q('[data-act="midnew"]'), "New mock");
+    ok(P.w.eval("PT.secs[0].qs.map((q) => q.id).join()") !== mock1 && P.w.eval("midMock().done") === 0, "New mock gives other questions and clears answers");
+    P.click(P.q('[data-act="midreset"]'), "Start over");
+    ok(!P.w.eval("SAVE.mid") || !P.w.eval("SAVE.mid.setup"), "Start over clears the setup");
+    ok(P.q('[data-act="midsetup"]'), "after Start over the page offers setup again");
+    assertNoErrors("midterm mock");
+    P.close();
+    log("  midterm: OK");
   }
   return { passed, units };
 }
