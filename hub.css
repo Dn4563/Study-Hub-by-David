@@ -13,11 +13,11 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font:400 17px/1.5 var(--sans)}
 .wrap{max-width:880px;margin:0 auto;padding:48px 24px 72px}
-header{margin-bottom:40px}
+header{margin-bottom:32px}
 h1{font:600 clamp(2.4rem,6vw,3.4rem)/1 var(--serif);margin:0;letter-spacing:-.01em}
 h1 small{display:block;font:400 1.05rem/1.4 var(--sans);color:var(--ink-2);letter-spacing:0;margin-top:8px}
 
-#courses{list-style:none;margin:0;padding:0;display:grid;gap:30px}
+#courses{list-style:none;margin:0;padding:0;display:grid;gap:26px}
 .course{--c:var(--light);position:relative;padding-top:38px}
 :root[data-theme="dark"] .course{--c:var(--dark)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .course{--c:var(--dark)}}
@@ -29,6 +29,7 @@ h1 small{display:block;font:400 1.05rem/1.4 var(--sans);color:var(--ink-2);lette
 .sheet{background:var(--sheet);border-top:4px solid var(--c);border-radius:0 0 8px 8px;padding:22px 24px 10px;box-shadow:0 1px 0 var(--rule)}
 .desc{margin:0 0 4px;color:var(--ink-2);max-width:60ch}
 .note{margin:0 0 6px;font-size:.92rem;color:var(--ink-2)}
+.note a{color:var(--c);font-weight:600;text-underline-offset:3px}
 
 .units{list-style:none;margin:12px -24px 0;padding:0}
 .units a{display:grid;grid-template-columns:6.2rem 1fr auto;gap:14px;align-items:center;padding:14px 24px;
@@ -36,7 +37,7 @@ h1 small{display:block;font:400 1.05rem/1.4 var(--sans);color:var(--ink-2);lette
 .units a:hover{background:color-mix(in srgb,var(--c) 8%,transparent)}
 .units a:focus-visible{outline:3px solid var(--c);outline-offset:-3px}
 .ul{font-weight:600;color:var(--c)}
-.st{display:block;font-size:.86rem;color:var(--ink-2)}
+.st{display:block;font-size:.88rem;font-weight:600;color:var(--c)}
 .open{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--c)}
 .open svg{transition:transform .15s}
 .units a:hover .open svg{transform:translateX(2px)}

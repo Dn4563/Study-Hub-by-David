@@ -3,27 +3,9 @@
   "byline": "by David Noskow",
   "courses": [
     {
-      "id": "psych",
-      "name": "AP Psychology",
-      "description": "Phineas's study kit for the class, with units 0, 1 and 5 and AAQ & EBQ practice so far.",
-      "url": "https://ichbleibhier.github.io/Psych-Unit-1/Psych%20Unit%201%20Study%20Kit.html",
-      "owner": "external",
-      "maker": "Phineas",
-      "accent": "#2F6B5E",
-      "accentDark": "#7FC2B1",
-      "status": "active",
-      "units": [
-        {
-          "label": "Full kit",
-          "title": "Units 0, 1, 5 and AAQ & EBQ on one page",
-          "status": "ready"
-        }
-      ]
-    },
-    {
       "id": "psych-david",
-      "name": "AP Psychology (David's format)",
-      "description": "Phineas's Psych kit content in David's study-kit format, used with his permission: Learn with definition and applied questions, flashcards, quizzes, practice exams, and AAQ & EBQ free response practice.",
+      "name": "AP Psychology",
+      "description": "Phineas's AP Psych kit, in David's format, used with his permission.",
       "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/",
       "owner": "self",
       "accent": "#2F6B5E",
@@ -33,33 +15,35 @@
         {
           "label": "Unit 0",
           "title": "Perspectives, research methods, statistics",
-          "status": "ready",
           "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u0"
         },
         {
           "label": "Unit 1",
           "title": "Neurons, the brain, senses, sleep and drugs",
-          "status": "ready",
           "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u1"
         },
         {
           "label": "Unit 5",
           "title": "Health psychology, disorders, treatment",
-          "status": "ready",
           "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#u5"
         },
         {
           "label": "AAQ & EBQ",
           "title": "Free response practice",
-          "status": "current",
           "url": "https://dn4563.github.io/AP-Psych-Study-Kit-by-David-/#frq"
+        }
+      ],
+      "links": [
+        {
+          "label": "Phineas's original kit",
+          "url": "https://ichbleibhier.github.io/Psych-Unit-1/Psych%20Unit%201%20Study%20Kit.html"
         }
       ]
     },
     {
       "id": "apworld",
       "name": "AP World History",
-      "description": "Flashcards, lessons, quizzes and a full practice test for each unit, built from AMSCO.",
+      "description": "Lessons, flashcards, quizzes and practice tests, built from AMSCO.",
       "url": "https://dn4563.github.io/AP-World-History-Study-Kit/",
       "owner": "self",
       "accent": "#8E3B2F",
@@ -69,13 +53,11 @@
         {
           "label": "Unit 2",
           "title": "Networks of Exchange",
-          "status": "review",
           "url": "https://dn4563.github.io/AP-World-History-Study-Kit/#u2"
         },
         {
           "label": "Unit 3",
           "title": "Land-Based Empires",
-          "status": "current",
           "url": "https://dn4563.github.io/AP-World-History-Study-Kit/#u3"
         }
       ]
@@ -83,7 +65,7 @@
     {
       "id": "chem",
       "name": "Pre-AP Chemistry",
-      "description": "One kit per chapter, with practice exams scored by day and partial credit on multi-part questions.",
+      "description": "One kit per chapter, with practice exams.",
       "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/",
       "owner": "self",
       "accent": "#2C5AA0",
@@ -93,19 +75,16 @@
         {
           "label": "Chapter 3",
           "title": "Matter",
-          "status": "review",
           "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch03"
         },
         {
           "label": "Chapter 4",
           "title": "Elements, Atoms, and Ions",
-          "status": "review",
           "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch04"
         },
         {
           "label": "Chapter 5",
           "title": "Nomenclature",
-          "status": "current",
           "url": "https://dn4563.github.io/Pre-AP-Chemistry-Study-Kit/#ch05"
         }
       ]
@@ -113,7 +92,7 @@
     {
       "id": "jhist",
       "name": "Jewish History Honors",
-      "description": "Flashcards, lessons, practice sets and a 40-question mock test built from the class packets.",
+      "description": "Built from the class packets.",
       "url": "https://dn4563.github.io/Jewish-History-Study-Kit/",
       "owner": "self",
       "accent": "#7A4E2D",
@@ -123,7 +102,6 @@
         {
           "label": "Test 1",
           "title": "Avraham to Nation",
-          "status": "current",
           "url": "https://dn4563.github.io/Jewish-History-Study-Kit/#u1"
         }
       ]
@@ -131,7 +109,7 @@
     {
       "id": "apbus",
       "name": "AP Business",
-      "description": "Flashcards, lessons, quizzes, practice sets and a 40-question mock test for each unit, built from the class slides and study guide.",
+      "description": "Built from the class slides and study guide.",
       "url": "https://dn4563.github.io/AP-Business-Study-Kit-by-David/",
       "owner": "self",
       "accent": "#6B3A7A",
@@ -141,13 +119,11 @@
         {
           "label": "Unit 1",
           "title": "Business, Competition, and New Ideas",
-          "status": "review",
           "url": "https://dn4563.github.io/AP-Business-Study-Kit-by-David/#u1"
         },
         {
           "label": "Unit 2",
           "title": "Marketing",
-          "status": "current",
           "url": "https://dn4563.github.io/AP-Business-Study-Kit-by-David/#u2"
         }
       ]
