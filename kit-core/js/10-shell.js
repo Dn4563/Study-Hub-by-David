@@ -88,6 +88,7 @@ function homeHTML() {
   });
   h += "</ul>";
   if (midOn()) h += midRowHTML();
+  h += '<p class="newslink"><button class="lnk" data-act="newsall">What\'s new</button></p>';
   return h + backupHTML() + "</main>" + creditLine();
 }
 

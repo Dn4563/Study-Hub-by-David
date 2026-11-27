@@ -17,7 +17,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     passed++;
   };
 
-  function open(hash, store) {
+  function open(hash, store, extra) {
     const vc = new VirtualConsole();
     vc.on("jsdomError", (e) => errors.push(e.message + (e.detail ? " " + e.detail : "")));
     vc.on("error", (...a) => errors.push(a.join(" ")));
@@ -33,6 +33,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
         w.open = () => null;
         w.print = () => {};
         for (const [k, v] of Object.entries(store || {})) w.localStorage.setItem(k, v);
+        if (extra && extra.news) w.__NEWS = extra.news;
       },
     });
     const w = dom.window,
@@ -879,6 +880,49 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     assertNoErrors("midterm mock");
     P.close();
     log("  midterm: OK");
+  }
+  // 11. What's new: a returning student gets this course's news (major on its own screen, small ones on a list) and
+  //     other used courses' news on an "Elsewhere" screen; unused courses are left out; Got it marks all seen.
+  //     A brand-new visitor sees nothing. The course page has a What's new link.
+  {
+    const cid = course.id,
+      news = {
+        courses: { zzz: "Other Course", yyy: "Unused Course" },
+        items: [
+          { id: "t-major", date: "2026-11-27", size: "major", course: cid, title: "Big change here", text: "Something major." },
+          { id: "t-small", date: "2026-11-26", size: "small", course: "all", title: "Small site-wide fix", text: "Something small." },
+          { id: "t-else", date: "2026-11-25", size: "small", course: "zzz", title: "Other course update", text: "In another kit." },
+          { id: "t-unused", date: "2026-11-25", size: "major", course: "yyy", title: "Unused course update", text: "Not for this student." },
+        ],
+      };
+    const back = { ["sk:" + cid + ":" + units[0] + ":kit"]: "{}", "sk:zzz:u1:kit": "{}" };
+    P = open(units[0], back, { news });
+    ok(P.q("#modalhost .modal") && /Big change here/.test(P.q("#modalhost").textContent), "what's new opens for a returning student, major change first");
+    ok(P.qa("#modalhost .mdots i").length === 3, "what's new: major, smaller changes, elsewhere (3 screens)");
+    let seenText = "";
+    for (let i = 0; i < 3; i++) {
+      seenText += P.q("#modalhost").textContent;
+      P.click(P.q('#modalhost [data-act="mnext"]'), "Next / Got it");
+    }
+    ok(/Small site-wide fix/.test(seenText) && /Other Course: Other course update/.test(seenText) && /Elsewhere on the site/.test(seenText), "what's new lists small changes and other used courses");
+    ok(!/Unused Course/.test(seenText), "what's new leaves out courses this browser hasn't used");
+    ok(/Major/.test(seenText) && /Small/.test(seenText), "what's new labels Major and Small");
+    ok(!P.q("#modalhost .modal"), "Got it closes what's new");
+    const after = P.storage();
+    ok(news.items.every((x) => JSON.parse(after["sk:news"]).seen.includes(x.id)), "what's new marks everything seen");
+    P.close();
+    P = open(units[0], after, { news });
+    ok(!P.q("#modalhost .modal"), "what's new doesn't come back once seen");
+    P.close();
+    P = open(units[0], {}, { news });
+    ok(!P.q("#modalhost .modal") && JSON.parse(P.storage()["sk:news"]).seen.length === 4, "a brand-new visitor sees no pile of old news");
+    P.close();
+    P = open("", after, { news });
+    P.click(P.q('[data-act="newsall"]'), "What's new link");
+    ok(/Big change here/.test(P.q("#modalhost").textContent) && !/Other course update/.test(P.q("#modalhost").textContent), "the course page's What's new lists this course's updates");
+    assertNoErrors("what's new");
+    P.close();
+    log("  what's new: OK");
   }
   return { passed, units };
 }

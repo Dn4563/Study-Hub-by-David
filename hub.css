@@ -42,7 +42,7 @@ h1 small{display:block;font:400 1.05rem/1.4 var(--sans);color:var(--ink-2);lette
 .open svg{transition:transform .15s}
 .units a:hover .open svg{transform:translateX(2px)}
 
-footer{margin-top:40px;display:flex}
+footer{margin-top:40px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center}
 .themeswitch{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:4px 0;color:var(--ink-2);font:400 .85rem/1 var(--sans);cursor:pointer}
 .themeswitch:hover{color:var(--ink)}
 .themeswitch:focus-visible{outline:2px solid var(--ink-2);outline-offset:4px;border-radius:4px}
@@ -63,3 +63,22 @@ footer{margin-top:40px;display:flex}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 a:focus-visible,button:focus-visible{outline:3px solid var(--ink-2);outline-offset:3px;border-radius:4px}
+
+/* What's new pop-up (hub.js) */
+.newsall{background:none;border:0;padding:4px 0;color:var(--ink-2);font:400 .85rem/1 var(--sans);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+dialog.news{width:min(34rem,calc(100% - 32px));max-height:calc(100vh - 40px);border:0;border-radius:12px;padding:20px 24px 16px;background:var(--sheet);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.28)}
+dialog.news::backdrop{background:rgba(20,22,26,.45)}
+dialog.news h2{font:600 1.5rem/1.2 var(--serif);margin:0 0 8px}
+dialog.news p{margin:8px 0}
+.ntop{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.ndots{display:flex;gap:6px}.ndots i{width:8px;height:8px;border-radius:4px;background:var(--rule)}.ndots i.on{width:22px;background:var(--ink-2)}
+.nx{background:none;border:0;color:var(--ink-2);font-size:1rem;cursor:pointer;padding:4px 6px}
+.nhead{display:flex;align-items:center;gap:10px}
+.ntag{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2)}
+.ntag.major{color:var(--ink);border-color:var(--ink-2)}
+.ndate,.nmore{color:var(--ink-2);font-size:.85rem}
+.nlist{list-style:none;margin:8px 0;padding:0}.nlist li{padding:10px 0;border-top:1px solid var(--rule)}.nlist li:first-child{border-top:0}
+.nfoot{display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--rule)}
+.nb{font:600 .95rem/1 var(--sans);padding:10px 18px;border-radius:8px;border:0;background:var(--ink);color:var(--sheet);cursor:pointer}
+.nb.ghost{background:none;color:var(--ink-2)}.nb:disabled{opacity:.4;cursor:default}
+dialog.news :focus-visible,.newsall:focus-visible{outline:3px solid var(--ink-2);outline-offset:2px}

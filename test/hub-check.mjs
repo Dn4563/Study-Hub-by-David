@@ -95,6 +95,49 @@ for (const [w, h] of [[390, 844], [1280, 900]]) for (const scheme of ['light', '
   check(!/Current|Test done|kept for review/.test(text), 'old status labels still shown');
   await page.close();
 }
+// What's new: a returning visitor (has Psych progress) gets news for Psych and site-wide items, not other courses';
+// "Got it" marks everything seen, so it doesn't come back. A brand-new visitor sees nothing.
+{
+  const news = JSON.parse(await readFile(join(root, 'news.json'), 'utf8'));
+  for (const it of news.items) check(it.id && it.date && /^(major|small)$/.test(it.size) && it.title && it.text && it.course, `news.json: item ${it.id || '?'} needs id, date, size (major/small), course, title and text`);
+  check(new Set(news.items.map(it => it.id)).size === news.items.length, 'news.json: ids must be unique');
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto(base);
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('sk:psych:u0:kit', '{}'); });
+  await page.reload();
+  await page.waitForSelector('dialog.news[open]');
+  const forPsych = news.items.filter(it => it.course === 'all' || [].concat(it.course).includes('psych'));
+  const majors = forPsych.filter(it => it.size === 'major').length;
+  let all = '';
+  for (let i = 0; i < 12; i++) {
+    all += await page.textContent('dialog.news');
+    const next = await page.$('dialog.news [data-n="next"]');
+    if (!next) break;
+    const last = (await next.textContent()) === 'Got it';
+    await next.click();
+    if (last) break;
+  }
+  check(forPsych.every(it => all.includes(it.title)), "hub what's new: shows every item for Psych and the whole site");
+  check(!news.items.filter(it => it.course !== 'all' && ![].concat(it.course).includes('psych')).some(it => all.includes(it.title)), "hub what's new: leaves out courses this browser hasn't used");
+  check(majors > 0 && /Major/.test(all) && /Small/.test(all), "hub what's new: labels Major and Small");
+  check(!(await page.$('dialog.news')), "hub what's new: Got it closes it");
+  const seen = await page.evaluate(() => (JSON.parse(localStorage.getItem('sk:news')) || {}).seen || []);
+  check(news.items.every(it => seen.includes(it.id)), "hub what's new: everything is marked seen");
+  await page.reload();
+  await page.waitForSelector('.course');
+  await page.waitForTimeout(300);
+  check(!(await page.$('dialog.news')), "hub what's new: doesn't come back after Got it");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('.course');
+  await page.waitForTimeout(300);
+  check(!(await page.$('dialog.news')), "hub what's new: a brand-new visitor sees nothing");
+  check(await page.evaluate(() => !!localStorage.getItem('sk:news')), "hub what's new: a brand-new visitor's news is marked seen");
+  await page.click('#newsall');
+  check(!!(await page.$('dialog.news[open]')), "hub What's new link opens the list");
+  await ctx.close();
+}
 await browser.close();
 server.close();
 

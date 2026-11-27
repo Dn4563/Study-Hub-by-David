@@ -1,0 +1,83 @@
+{
+  "courses": {
+    "psych": "AP Psychology",
+    "chem": "Pre-AP Chemistry",
+    "apworld": "AP World History",
+    "apbus": "AP Business",
+    "jhist": "Jewish History Honors"
+  },
+  "items": [
+    {
+      "id": "2026-11-27-start",
+      "date": "2026-11-27",
+      "size": "major",
+      "course": "all",
+      "title": "A new Start screen",
+      "text": "Every unit now opens with three choices: Test tomorrow? (a guided session for tonight, in short rounds), I have a few days (a study plan), or Let me pick. The tabs are grouped into Study, Test yourself and Notes."
+    },
+    {
+      "id": "2026-11-27-midterm",
+      "date": "2026-11-27",
+      "size": "major",
+      "course": ["psych", "chem", "apworld", "apbus"],
+      "title": "Midterm review",
+      "text": "Open it from the course page: mixed questions from every unit, a little each day, with more from your weak units, plus a 40-question mock midterm. Midterms are the week of Dec 14."
+    },
+    {
+      "id": "2026-11-27-focus",
+      "date": "2026-11-27",
+      "size": "small",
+      "course": "all",
+      "title": "Focus timer",
+      "text": "Work, then a short break, on repeat (25 + 5, 50 + 10, or your own). It pauses if you switch tabs. Find it on Start."
+    },
+    {
+      "id": "2026-11-27-time",
+      "date": "2026-11-27",
+      "size": "small",
+      "course": "all",
+      "title": "Pick your exact time and days",
+      "text": "Tonight's session, the Study plan and Midterm review take any time from 15 minutes to 5 hours, and the Study plan asks how many days to spread it over."
+    },
+    {
+      "id": "2026-11-27-tidy",
+      "date": "2026-11-27",
+      "size": "small",
+      "course": "all",
+      "title": "Less clutter",
+      "text": "Flashcard and Practice Test settings moved under Options, Study guide decks fold up, and the course page shows how far along you are."
+    },
+    {
+      "id": "2026-11-27-gemini",
+      "date": "2026-11-27",
+      "size": "small",
+      "course": ["psych", "chem", "apworld"],
+      "title": "One Gemini key for every kit",
+      "text": "Add a free Gemini key once in Settings and it grades written answers in every kit. If the key stops working, a pop-up lets you update it."
+    },
+    {
+      "id": "2026-11-27-psych-decks",
+      "date": "2026-11-27",
+      "size": "small",
+      "course": "psych",
+      "title": "Smaller decks",
+      "text": "Research Methods, Sleep & Drugs, and Treatment are split into smaller decks. Your progress carried over."
+    },
+    {
+      "id": "2026-11-27-chem-formulas",
+      "date": "2026-11-27",
+      "size": "small",
+      "course": "chem",
+      "title": "Formula boxes and self-checking answers",
+      "text": "Typed formulas show subscripts and charges as you type (H2O becomes H₂O), with an optional boxes mode. Many short answers in Chapters 3 and 4 now check themselves."
+    },
+    {
+      "id": "2026-11-27-world-saq",
+      "date": "2026-11-27",
+      "size": "small",
+      "course": "apworld",
+      "title": "Short answers check themselves",
+      "text": "Each SAQ part shows which key ideas your answer has. You can still mark it yourself, or grade it with Gemini."
+    }
+  ]
+}

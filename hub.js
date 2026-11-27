@@ -81,3 +81,76 @@ addEventListener('storage', e => {
   if (t === 'light' || t === 'dark' || t === 'auto') { document.documentElement.setAttribute('data-theme', t); syncSwitch(); }
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncSwitch);
+
+// What's new: the same news.json and "seen" memory (sk:news) as every kit (kit-core/js/06-news.js).
+// The hub shows updates for the courses this browser has used, plus site-wide ones. Someone new sees nothing.
+const NEWSK = 'sk:news';
+const readJ = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+function usedCourses() {
+  const used = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const m = /^sk:([^:]+):(?:[^:]+:(?:kit|pt|fr)|last)$/.exec(localStorage.key(i) || '');
+      if (m) used[m[1]] = true;
+    }
+  } catch (e) {}
+  return used;
+}
+const newsCourses = it => (it.course === 'all' ? [] : [].concat(it.course));
+const newsDay = d => { const p = String(d || '').split('-').map(Number); return p.length === 3 ? new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
+const newsTag = it => `<span class="ntag${it.size === 'major' ? ' major' : ''}">${it.size === 'major' ? 'Major' : 'Small'}</span>`;
+function newsList(N, items) {
+  const shown = items.slice(0, 10), more = items.length - shown.length;
+  const name = it => newsCourses(it).map(c => (N.courses || {})[c] || c).join(', ');
+  return `<ul class="nlist">${shown.map(it => `<li>${newsTag(it)} <b>${esc((name(it) ? name(it) + ': ' : '') + it.title)}</b> ${esc(it.text)} <span class="ndate">${esc(newsDay(it.date))}</span></li>`).join('')}</ul>` +
+    (more ? `<p class="nmore">And ${more} earlier change${more === 1 ? '' : 's'}.</p>` : '');
+}
+function newsDialog(N, steps, onEnd) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'news';
+  dlg.setAttribute('aria-label', "What's new");
+  let i = 0;
+  const draw = () => {
+    dlg.innerHTML = `<div class="ntop">${steps.length > 1 ? `<span class="ndots" role="img" aria-label="Step ${i + 1} of ${steps.length}">${steps.map((s, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</span>` : '<span></span>'}<button class="nx" type="button" data-n="x" aria-label="Close">✕</button></div>${steps[i]}
+      <div class="nfoot"><button type="button" class="nb ghost" data-n="back"${i ? '' : ' disabled'}>Back</button><button type="button" class="nb" data-n="next">${i < steps.length - 1 ? 'Next' : 'Got it'}</button></div>`;
+    dlg.querySelector('[data-n="next"]').focus();
+  };
+  dlg.addEventListener('click', e => {
+    const b = e.target.closest('[data-n]');
+    if (!b) return;
+    if (b.dataset.n === 'x') dlg.close();
+    else if (b.dataset.n === 'back' && i > 0) { i--; draw(); }
+    else if (b.dataset.n === 'next') { if (i < steps.length - 1) { i++; draw(); } else dlg.close(); }
+  });
+  dlg.addEventListener('close', () => { dlg.remove(); if (onEnd) onEnd(); });
+  document.body.appendChild(dlg);
+  draw();
+  dlg.showModal();
+  dlg.querySelector('[data-n="next"]').focus();
+}
+function newsMarkSeen(N) {
+  const seen = (readJ(NEWSK) || {}).seen || [];
+  N.items.forEach(it => { if (seen.indexOf(it.id) < 0) seen.push(it.id); });
+  try { localStorage.setItem(NEWSK, JSON.stringify({ seen, at: Date.now() })); } catch (e) {}
+}
+const byNewest = (a, b) => String(b.date).localeCompare(String(a.date));
+fetch('news.json', { cache: 'no-cache' })
+  .then(r => (r.ok ? r.json() : null))
+  .then(N => {
+    if (!N || !Array.isArray(N.items)) return;
+    window.__hubNews = N;
+    const used = usedCourses(), seen = (readJ(NEWSK) || {}).seen;
+    if (!Object.keys(used).length && !seen) return newsMarkSeen(N); // first visit: nothing piles up
+    const fresh = N.items.filter(it => it.id && (seen || []).indexOf(it.id) < 0 && (it.course === 'all' || newsCourses(it).some(c => used[c]))).sort(byNewest);
+    if (!fresh.length) return newsMarkSeen(N);
+    const majors = fresh.filter(it => it.size === 'major'), big = majors.slice(0, 4);
+    const rest = majors.slice(4).concat(fresh.filter(it => it.size !== 'major')).sort(byNewest);
+    const steps = big.map(it => `<p class="nhead">${newsTag(it)}<span class="ndate">${esc(newsDay(it.date))}</span></p><h2>${esc(it.title)}</h2><p>${esc(it.text)}</p>`);
+    if (rest.length) steps.push(`<h2>${big.length ? 'Smaller changes' : "What's new"}</h2>${newsList(N, rest)}`);
+    newsDialog(N, steps, () => newsMarkSeen(N));
+  })
+  .catch(() => {});
+document.getElementById('newsall').addEventListener('click', () => {
+  const N = window.__hubNews;
+  if (N) newsDialog(N, [`<h2>What's new</h2>${newsList(N, N.items.slice().sort(byNewest))}`]);
+});

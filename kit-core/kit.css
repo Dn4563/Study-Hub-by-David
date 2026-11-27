@@ -656,3 +656,13 @@ input.fhide { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-e
 /* "How much time" and "How many days" dropdowns in the setup pop-ups */
 .minsel { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 18px 0 6px; font-weight: 600; }
 .minsel select { font-weight: 400; font-size: 1rem; min-width: 11rem; padding: 8px 10px; }
+
+/* What's new pop-up (js/06-news.js) */
+.nhead { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.ntag { display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .02em; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); background: var(--ground); }
+.ntag.major { color: var(--accent); border-color: var(--accent); background: var(--accent-wash); }
+.ndate { color: var(--ink-2); font-size: .85rem; }
+.nlist { list-style: none; margin: 12px 0 4px; padding: 0; }
+.nlist li { padding: 10px 0; border-top: 1px solid var(--rule); line-height: 1.5; }
+.nlist li:first-child { border-top: 0; }
+.newslink { margin: 14px 0 0; }
