@@ -1,7 +1,7 @@
 # Status: Study Hub and study kits
 
 ## Context
-David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build from one shared engine and appear under one hub site. Everything below is live on `main` as of 2026-11-02. Read this file first in a new session. Update it when something changes.
+David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build from one shared engine and appear under one hub site. Everything below is live on `main` as of 2026-11-27. Read this file first in a new session. Update it when something changes.
 
 ## Live sites and repos (GitHub account Dn4563)
 | Site | Repo | Local clone |
@@ -63,7 +63,7 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
   - Generators: `scripts/asks-src/u1_*.py`, `u2_*.py` (+ `mkasks.py`), `scripts/practice-src/*.py`.
   - GitHub Pages: David turns it on (Settings → Pages → main / root); until then the site and hub link 404.
 - **Hub clean-up (Nov 27):** status labels ("Current", "Test done, kept for review") removed; units get an optional `testDate` instead ("Test on Thu, Dec 3" / "Test tomorrow" / "Test today" until the day, then nothing), and the course with the soonest test comes first. The two AP Psychology cards are now one ("AP Psychology", id `psych-david`) with a "Phineas's original kit" link (`links` in `courses.json`). Each course has one short line. Hub page is about a quarter shorter. `test/hub-check.mjs` checks dates, order and that the old labels are gone. Redesign audit: https://claude.ai/artifact/E99dRkiezkhhZneTxqGqfK (11 ranked problems; next: mockups).
-- **Redesign (Nov 27, on the work branch, NOT on `main` yet; waiting for David's "push"):** built while David was offline, from the audit and the mockups (https://claude.ai/artifact/WZFpxaG9XUdqQCrHwQvw5M). Card ids and save keys are unchanged, so everyone's progress carries over.
+- **Redesign (live on `main` Nov 27, after David's "push"):** built while David was offline, from the audit and the mockups (https://claude.ai/artifact/WZFpxaG9XUdqQCrHwQvw5M). Card ids and save keys are unchanged, so everyone's progress carries over.
   - **Pop-ups:** one shared pop-up (`js/05-modal.js`: steps with dots, Back / Next, ✕ and Esc, focus kept inside). Every "are you sure?" now uses it.
   - **Tabs:** Start, Study (Learn, Flashcards, Quiz), Test yourself (Practice Test, Mock exam), Notes (Study guide, Cheat sheet, Progress), and the gear. Full header only on Start; a slim one-line header elsewhere. Old saved tabs still open the right tool.
   - **Start screen** (`js/12-start.js`): "Pick up where you left off", then three choices: **Test tomorrow?** (`js/76-tonight.js`: pick Read first or Quiz me first and 30 / 45 / 60 / 90 minutes; rounds of 6–10 terms with the section's intro, misses come back first in the next round, a 10-question check at the end), **I have a few days** (the Study plan, now set up in a 7-step pop-up) and **Let me pick** (all tools).
@@ -122,7 +122,6 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
 - **Wording:** be direct and precise; David notices word choice.
 
 ## Open items
-- **Redesign:** on the work branch in all 6 repos; goes live when David says "push".
 - **Midterms (week of Dec 14):** David sends each course's day, length, format and units; then set them in `course.json` `midterm` and fit the mock to the real format. Jewish History gets a midterm page once it has a second unit.
 - **Test dates:** add `testDate` in the hub's `courses.json` when David sends them.
 - **Diagram licenses:** license and author for the two Chem Ch 3 diagram images (David chose to leave these for now).
