@@ -84,6 +84,7 @@ David Noskow (10th grade, DKJA) keeps study kits for his classes. They all build
 - **What's new (Nov 27, work branch, waiting for "push"):** one update list for the whole site, `news.json` in the hub repo (id, date, `major`/`small`, `course`: id, ids or `all`, title, text). Every kit (`kit-core/js/06-news.js`) and the hub (`hub.js`, a `<dialog>`) read it when a page opens and show what this browser hasn't seen (`sk:news`, shared site-wide):
   - one screen per major change for the kit you're in, all small ones on one list, and other kits' updates (major and small) on an "Elsewhere on the site" screen, only for kits this browser has used;
   - a browser with no saved progress anywhere is new: everything is marked seen, nothing shows;
+  - an entry with `"everyone": true` (a new kit) reaches every returning student, whatever kits they use (David, Nov 27);
   - Got it, ✕ or Esc marks everything seen; "What's new" links on each course page and the hub footer reread recent updates.
   - First entries: today's redesign (Start screen and Midterm review as major; focus timer, time and days, less clutter, Gemini, Psych decks, Chem formulas, World SAQ checks as small). The first time, everyone with any history sees this batch; after that it's exact per browser.
 - **Hub (Nov 13):** `hub.js` loads `courses.json` with `cache: 'no-cache'`, so a new course or unit shows up on the next visit instead of after the browser's 10-minute cache.

@@ -893,6 +893,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
           { id: "t-small", date: "2026-11-26", size: "small", course: "all", title: "Small site-wide fix", text: "Something small." },
           { id: "t-else", date: "2026-11-25", size: "small", course: "zzz", title: "Other course update", text: "In another kit." },
           { id: "t-unused", date: "2026-11-25", size: "major", course: "yyy", title: "Unused course update", text: "Not for this student." },
+          { id: "t-newkit", date: "2026-11-24", size: "major", course: "nnn", everyone: true, title: "New kit added", text: "Everyone hears about this." },
         ],
       };
     const back = { ["sk:" + cid + ":" + units[0] + ":kit"]: "{}", "sk:zzz:u1:kit": "{}" };
@@ -906,6 +907,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     }
     ok(/Small site-wide fix/.test(seenText) && /Other Course: Other course update/.test(seenText) && /Elsewhere on the site/.test(seenText), "what's new lists small changes and other used courses");
     ok(!/Unused Course/.test(seenText), "what's new leaves out courses this browser hasn't used");
+    ok(/New kit added/.test(seenText), "a new kit (everyone: true) is announced to every returning student");
     ok(/Major/.test(seenText) && /Small/.test(seenText), "what's new labels Major and Small");
     ok(!P.q("#modalhost .modal"), "Got it closes what's new");
     const after = P.storage();
@@ -915,7 +917,7 @@ export async function clickthrough(htmlPath, { log = console.log } = {}) {
     ok(!P.q("#modalhost .modal"), "what's new doesn't come back once seen");
     P.close();
     P = open(units[0], {}, { news });
-    ok(!P.q("#modalhost .modal") && JSON.parse(P.storage()["sk:news"]).seen.length === 4, "a brand-new visitor sees no pile of old news");
+    ok(!P.q("#modalhost .modal") && JSON.parse(P.storage()["sk:news"]).seen.length === 5, "a brand-new visitor sees no pile of old news");
     P.close();
     P = open("", after, { news });
     P.click(P.q('[data-act="newsall"]'), "What's new link");

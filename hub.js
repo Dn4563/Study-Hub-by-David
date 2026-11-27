@@ -83,7 +83,8 @@ addEventListener('storage', e => {
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncSwitch);
 
 // What's new: the same news.json and "seen" memory (sk:news) as every kit (kit-core/js/06-news.js).
-// The hub shows updates for the courses this browser has used, plus site-wide ones. Someone new sees nothing.
+// The hub shows updates for the courses this browser has used, plus site-wide ones and any marked "everyone"
+// (a new kit). Someone new sees nothing.
 const NEWSK = 'sk:news';
 const readJ = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
 function usedCourses() {
@@ -141,7 +142,7 @@ fetch('news.json', { cache: 'no-cache' })
     window.__hubNews = N;
     const used = usedCourses(), seen = (readJ(NEWSK) || {}).seen;
     if (!Object.keys(used).length && !seen) return newsMarkSeen(N); // first visit: nothing piles up
-    const fresh = N.items.filter(it => it.id && (seen || []).indexOf(it.id) < 0 && (it.course === 'all' || newsCourses(it).some(c => used[c]))).sort(byNewest);
+    const fresh = N.items.filter(it => it.id && (seen || []).indexOf(it.id) < 0 && (it.course === 'all' || it.everyone || newsCourses(it).some(c => used[c]))).sort(byNewest);
     if (!fresh.length) return newsMarkSeen(N);
     const majors = fresh.filter(it => it.size === 'major'), big = majors.slice(0, 4);
     const rest = majors.slice(4).concat(fresh.filter(it => it.size !== 'major')).sort(byNewest);

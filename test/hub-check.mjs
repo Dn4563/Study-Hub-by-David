@@ -136,6 +136,12 @@ for (const [w, h] of [[390, 844], [1280, 900]]) for (const scheme of ['light', '
   check(await page.evaluate(() => !!localStorage.getItem('sk:news')), "hub what's new: a brand-new visitor's news is marked seen");
   await page.click('#newsall');
   check(!!(await page.$('dialog.news[open]')), "hub What's new link opens the list");
+  // A new kit (everyone: true) reaches a student who only uses Psych.
+  await page.route('**/news.json*', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ courses: { nnn: 'New Kit' }, items: [{ id: 'x-newkit', date: '2026-12-01', size: 'major', course: 'nnn', everyone: true, title: 'New Kit is here', text: 'A new kit.' }] }) }));
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('sk:psych:u0:kit', '{}'); });
+  await page.reload();
+  await page.waitForSelector('dialog.news[open]');
+  check(/New Kit is here/.test(await page.textContent('dialog.news')), "hub what's new: a new kit is announced to everyone");
   await ctx.close();
 }
 await browser.close();

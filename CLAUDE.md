@@ -22,7 +22,7 @@ These apply to every new unit or chapter in this kit, and to any rework of an ol
 - Don't invent content. Mark anything not in David's sources VERIFY.
 - Run `npm test`, show screenshots and examples, and wait for David's OK before pushing to `main`.
 - Keep `STATUS.md` in the Study-Hub-by-David repo up to date after every change. Also tell David in the chat, in a few short lines, what changed, which site and file it is in, and what was updated in `STATUS.md`. He does not read the whole status file.
-- Every change pushed to `main` gets an entry in the hub's `news.json` (id, date, `major` or `small`, `course`: a course id, a list of ids, or `all`; a short title and 1–2 plain sentences). Students see it once in a "What's new" pop-up; show David the entries with the screenshots.
+- Every change pushed to `main` gets an entry in the hub's `news.json` (id, date, `major` or `small`, `course`: a course id, a list of ids, or `all`; a short title and 1–2 plain sentences). Students see it once in a "What's new" pop-up; show David the entries with the screenshots. When a new kit is added, its entry gets `"everyone": true`, so every returning student hears about it, whatever kits they use.
 - Before building anything, describe the plan to David in the chat in plain words (what will change, where, and how it will work) and wait for his OK.
 
 ## Midterms

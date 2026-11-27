@@ -4,6 +4,7 @@
    something. All kits and the hub are on one site, so they share what this browser has seen (sk:news).
    - This kit's news: one screen per major change (newest first, up to 4), then all small ones on one list screen.
    - Other kits: listed on a last "Elsewhere on the site" screen, but only for kits this browser has used.
+   - "everyone": true (a new kit): shown to every returning student, whatever kits they use.
    - Someone with no saved progress anywhere on the site is new: everything is marked seen and nothing shows.
    - It shows as soon as the page opens, even mid-lesson; ✕, Esc or "Got it" mark everything seen.
    A test can set window.__NEWS instead of fetching. */
@@ -84,7 +85,7 @@ function newsCheck(N) {
     used = newsUsed(),
     fresh = N.items.filter((x) => x.id && seen.indexOf(x.id) < 0),
     here = fresh.filter((x) => newsFor(x, COURSE.id)),
-    elsewhere = fresh.filter((x) => !newsFor(x, COURSE.id) && newsCourses(x).some((c) => used[c]));
+    elsewhere = fresh.filter((x) => !newsFor(x, COURSE.id) && (x.everyone || newsCourses(x).some((c) => used[c])));
   if (!here.length && !elsewhere.length) return newsMarkSeen(N);
   newsShow(N, newsSteps(N, here, elsewhere), "What's new");
 }
